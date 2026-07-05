@@ -1,0 +1,9 @@
+.htaccess
+.project
+.buildpath
+.settings
+.DS_Store
+Thumbs.db
+*.tar.gz
+node_modules/
+vendor/
