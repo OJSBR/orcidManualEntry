@@ -1,0 +1,18 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: en\n"
+
+
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Manual ORCID (typeable)"
+
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Restores the typeable ORCID field in the author/contributor form when ORCID (OAuth) authentication is not configured, as in earlier OJS versions. Has no effect when ORCID OAuth is active."
+
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Enter the full ORCID iD, in the format https://orcid.org/0000-0002-1825-0097 (or just the 16 digits). Manual entry, without authentication."

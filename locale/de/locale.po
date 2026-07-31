@@ -1,0 +1,18 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: de\n"
+
+
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Manuelle ORCID (eingebbar)"
+
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Stellt das eingebbare ORCID-Feld im Autoren-/Beitragendenformular wieder her, wenn die ORCID-Authentifizierung (OAuth) nicht konfiguriert ist, wie in früheren OJS-Versionen. Ohne Wirkung, wenn ORCID OAuth aktiv ist."
+
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Geben Sie die vollständige ORCID-iD im Format https://orcid.org/0000-0002-1825-0097 ein (oder nur die 16 Ziffern). Manuelle Eingabe, ohne Authentifizierung."

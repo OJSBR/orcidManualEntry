@@ -74,7 +74,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      */
     public function getDisplayName(): string
     {
-        return 'ORCID manual (digitavel)';
+        return __('plugins.generic.orcidManualEntry.displayName');
     }
 
     /**
@@ -82,9 +82,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      */
     public function getDescription(): string
     {
-        return 'Restaura o campo ORCID digitavel no formulario de autor/contribuidor '
-            . 'quando a autenticacao ORCID (OAuth) nao esta configurada, como nas versoes '
-            . 'anteriores do OJS. Sem efeito quando o ORCID OAuth esta ativo.';
+        return __('plugins.generic.orcidManualEntry.description');
     }
 
     /**
@@ -119,9 +117,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
 
         $form->addField(new FieldText('orcid', [
             'label' => __('user.orcid'),
-            'description' => 'Informe o iD ORCID completo, no formato '
-                . 'https://orcid.org/0000-0002-1825-0097 (ou apenas os 16 digitos). '
-                . 'Preenchimento manual, sem autenticacao.',
+            'description' => __('plugins.generic.orcidManualEntry.field.description'),
             'isMultilingual' => false,
         ]), [FIELD_POSITION_AFTER, 'url']);
 
