@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.0.0.0-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.0.2.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.0.0.1/orcidManualEntry-1.0.0.1.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.0.2.0/orcidManualEntry-1.0.2.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** in the author/contributor form — the behaviour from older OJS versions — for
@@ -24,7 +24,7 @@ journals where **ORCID authentication (OAuth) is not configured**.
 
 | OJS version | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.0.0.0 |
+| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.0.2.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -51,6 +51,8 @@ need to record iDs. It is a pragmatic fallback, not a replacement for authentica
 - Accepts the bare iD (`0000-0002-1825-0097`) or the URL, and **normalizes** it to the
   canonical `https://orcid.org/0000-0002-1825-0097` the core expects.
 - Keeps the core's **format + checksum validation**: an invalid iD is rejected.
+- Shows the stored iD again when *Edit contributor* is reopened, so re-saving a contributor
+  never wipes it.
 
 ## Installation
 
@@ -60,14 +62,24 @@ need to record iDs. It is a pragmatic fallback, not a replacement for authentica
 
 ## How it works (technical)
 
-The core blocks manual ORCID in three places; the plugin neutralizes each **only when OAuth
+The core blocks manual ORCID in four places; the plugin neutralizes each **only when OAuth
 is off**:
 
-1. `Form::config::before` → adds a `FieldText('orcid')` to the `ContributorForm`.
-2. `Author::validate` → removes the `cannotUpdateAuthorOrcid` block while keeping the core's
+1. `Form::config::before` → adds a typeable `orcid` field to the `ContributorForm`.
+2. `TemplateManager::display` → publishes `js/orcidManualEntry.js`, which registers the
+   `field-orcid-manual` Vue component. This one is not obvious: `ContributorsListPanel`
+   `.openEditModal()` fills every field with `field.value = contributor[name]`, **except** a
+   field named `orcid`, which instead receives `field.orcid`, because the core assumes the
+   `FieldOrcid` (OAuth) component there. A plain `FieldText` reads `value`, so the stored iD
+   never reached the input: the form always reopened blank, and the next *Save* wrote that
+   blank over the stored iD. The component extends `FieldText` and seeds `value` from the
+   `orcid` prop on `mounted()`.
+3. `Author::validate` → removes the `cannotUpdateAuthorOrcid` block while keeping the core's
    format/checksum validation.
-3. `Author::add::before` / `Author::edit` → normalizes and (re)injects the iD before it is
-   written, since the edit endpoint strips `orcid` from the parameters by default.
+4. `Author::add::before` / `Author::edit` → normalizes and (re)injects the iD before it is
+   written, since the edit endpoint strips `orcid` from the parameters by default. Clearing
+   an existing iD is logged to the PHP error log, so that a future regression of the Vue
+   component is traceable instead of silent.
 
 ## Credits & authorship
 
@@ -122,6 +134,8 @@ alternativa pragmática, não um substituto da autenticação.
 - Aceita o iD nu (`0000-0002-1825-0097`) ou a URL e **normaliza** para
   `https://orcid.org/0000-0002-1825-0097`.
 - Mantém a **validação de formato e dígito verificador** do núcleo: iD inválido é rejeitado.
+- Reexibe o iD gravado ao reabrir *Editar contribuidor*, de modo que salvar o contribuidor
+  de novo nunca apaga o ORCID.
 
 ### Instalação
 

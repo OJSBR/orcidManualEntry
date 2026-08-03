@@ -16,11 +16,15 @@
  * contribuidor remove o ORCID dos parametros antes de salvar.
  *
  * Este plugin atua APENAS quando o ORCID OAuth NAO esta configurado no contexto,
- * neutralizando as tres barreiras:
- *   1) Form::config::before  -> adiciona um FieldText 'orcid' digitavel;
- *   2) Author::validate      -> remove o erro "cannotUpdateAuthorOrcid" (mantendo
+ * neutralizando as quatro barreiras:
+ *   1) Form::config::before  -> adiciona um campo 'orcid' digitavel;
+ *   2) TemplateManager::display
+ *                            -> publica o componente Vue 'field-orcid-manual',
+ *                               sem o qual o valor gravado nao volta para o
+ *                               formulario de edicao (ver addFieldComponent());
+ *   3) Author::validate      -> remove o erro "cannotUpdateAuthorOrcid" (mantendo
  *                               a validacao de formato/checksum do proprio core);
- *   3) Author::add::before /
+ *   4) Author::add::before /
  *      Author::edit          -> injeta/normaliza o ORCID informado antes da
  *                               gravacao no banco (o endpoint de edicao o remove
  *                               dos parametros, entao reinjetamos aqui).
@@ -34,10 +38,28 @@ use PKP\components\forms\publication\ContributorForm;
 use PKP\orcid\OrcidManager;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
+use PKP\template\PKPTemplateManager;
 use PKP\validation\ValidatorORCID;
 
 class OrcidManualEntryPlugin extends GenericPlugin
 {
+    /**
+     * Nome do componente Vue registrado por js/orcidManualEntry.js. Precisa ser
+     * diferente de 'field-text' porque o componente estende o FieldText para
+     * tambem ler a prop 'orcid' (ver addFieldComponent()).
+     */
+    public const FIELD_COMPONENT = 'field-orcid-manual';
+
+    /**
+     * Templates que montam o ContributorsListPanel, ou seja, onde o campo pode
+     * ser exibido: o painel (todos os fluxos de trabalho passam por ele) e o
+     * assistente de submissao.
+     */
+    public const TEMPLATES_WITH_CONTRIBUTORS = [
+        'dashboard/editors.tpl',
+        'submission/wizard.tpl',
+    ];
+
     /**
      * ORCID normalizado capturado em Author::validate para reaproveitar em
      * Author::add::before / Author::edit dentro da MESMA requisicao.
@@ -61,6 +83,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
 
         if ($this->getEnabled($mainContextId)) {
             Hook::add('Form::config::before', [$this, 'addOrcidField']);
+            Hook::add('TemplateManager::display', [$this, 'addFieldComponent']);
             Hook::add('Author::validate', [$this, 'allowManualOrcid']);
             Hook::add('Author::add::before', [$this, 'applyOrcidOnAdd']);
             Hook::add('Author::edit', [$this, 'applyOrcidOnEdit']);
@@ -116,6 +139,8 @@ class OrcidManualEntryPlugin extends GenericPlugin
         }
 
         $form->addField(new FieldText('orcid', [
+            // FieldText que le tambem a prop 'orcid'; ver addFieldComponent().
+            'component' => self::FIELD_COMPONENT,
             'label' => __('user.orcid'),
             'description' => __('plugins.generic.orcidManualEntry.field.description'),
             'isMultilingual' => false,
@@ -125,7 +150,56 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 2: remove o bloqueio "cannotUpdateAuthorOrcid" que o core adiciona
+     * Barreira 2: publica o componente Vue do campo.
+     *
+     * ContributorsListPanel.openEditModal() copia o contribuidor buscado na API
+     * para os campos do formulario, mas trata o campo chamado 'orcid' como caso
+     * especial: em vez de `field.value = contribuidor.orcid`, ele faz
+     * `field.orcid = contribuidor.orcid`, porque o core supoe que ali esteja o
+     * FieldOrcid (o widget de OAuth), que le essa prop. Um FieldText comum le
+     * `value`, entao o ORCID gravado nunca chegava ao input: o formulario
+     * reabria em branco e o "Salvar" seguinte regravava o branco por cima do
+     * ORCID armazenado.
+     *
+     * O componente registrado em js/orcidManualEntry.js estende o FieldText e
+     * inicializa `value` a partir da prop `orcid`, resolvendo os dois sintomas.
+     *
+     * O script precisa ser carregado depois do js/build.js (registrado pelo core
+     * com STYLE_SEQUENCE_LATE), para que 'field-text' ja exista no registro, e
+     * antes da chamada pkp.registry.init() no fim da pagina, que cria o app Vue.
+     * STYLE_SEQUENCE_LAST da exatamente essa janela.
+     *
+     * @param array $args [$templateMgr, &$template, &$output]
+     */
+    public function addFieldComponent(string $hookName, array $args): bool
+    {
+        if ($this->orcidOAuthActive()) {
+            return Hook::CONTINUE;
+        }
+
+        $templateMgr = $args[0];
+        $template = $args[1];
+
+        if (!in_array($template, self::TEMPLATES_WITH_CONTRIBUTORS, true)) {
+            return Hook::CONTINUE;
+        }
+
+        $baseUrl = Application::get()->getRequest()->getBaseUrl() . '/' . $this->getPluginPath();
+
+        $templateMgr->addJavaScript(
+            'orcidManualEntry',
+            "{$baseUrl}/js/orcidManualEntry.js",
+            [
+                'priority' => PKPTemplateManager::STYLE_SEQUENCE_LAST,
+                'contexts' => ['backend'],
+            ]
+        );
+
+        return Hook::CONTINUE;
+    }
+
+    /**
+     * Barreira 3: remove o bloqueio "cannotUpdateAuthorOrcid" que o core adiciona
      * sempre que 'orcid' esta presente nos parametros, preservando a validacao de
      * formato/checksum do proprio core. Tambem captura o valor normalizado para as
      * etapas de gravacao.
@@ -166,7 +240,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 3a: grava o ORCID ao ADICIONAR um contribuidor.
+     * Barreira 4a: grava o ORCID ao ADICIONAR um contribuidor.
      */
     public function applyOrcidOnAdd(string $hookName, array $args): bool
     {
@@ -181,9 +255,17 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 3b: grava o ORCID ao EDITAR um contribuidor. O endpoint remove o
+     * Barreira 4b: grava o ORCID ao EDITAR um contribuidor. O endpoint remove o
      * ORCID dos parametros antes de salvar, entao reinjetamos no objeto que sera
      * persistido (o hook roda antes do UPDATE no banco).
+     *
+     * Campo vazio significa "remover o ORCID", e assim deve continuar. Mas como
+     * essa e a operacao destrutiva do plugin -- e ja foi disparada sem querer,
+     * quando o formulario reabria em branco --, ela fica registrada no log de
+     * erros para que qualquer regressao futura do componente Vue seja
+     * rastreavel em vez de silenciosa.
+     *
+     * $args[0] e o autor que sera gravado; $args[1] e o autor como esta hoje.
      */
     public function applyOrcidOnEdit(string $hookName, array $args): bool
     {
@@ -191,6 +273,16 @@ class OrcidManualEntryPlugin extends GenericPlugin
             return Hook::CONTINUE;
         }
         $newAuthor = $args[0];
+        $currentOrcid = $args[1]->getData('orcid');
+
+        if (self::$pendingOrcid === null && !empty($currentOrcid)) {
+            error_log(sprintf(
+                '[orcidManualEntry] Removendo o ORCID %s do contribuidor %d (campo enviado vazio).',
+                $currentOrcid,
+                (int) $newAuthor->getId()
+            ));
+        }
+
         $newAuthor->setData('orcid', self::$pendingOrcid);
         self::$hasPending = false;
 
