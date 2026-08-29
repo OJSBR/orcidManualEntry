@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: vi\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "ORCID thủ công (nhập tay)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Khôi phục trường ORCID nhập tay khi chưa cấu hình xác thực ORCID (OAuth), như ở các phiên bản OJS trước: trong biểu mẫu tác giả/người đóng góp, trên trang đăng ký công khai và trong hồ sơ người dùng. Không có tác dụng khi ORCID OAuth đang bật."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Nhập ORCID iD đầy đủ, theo định dạng https://orcid.org/0000-0002-1825-0097 (hoặc chỉ 16 chữ số)."

@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: bg\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Ръчен ORCID (за въвеждане)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Възстановява полето ORCID за въвеждане, когато удостоверяването с ORCID (OAuth) не е настроено, както в по-старите версии на OJS: във формуляра за автор/сътрудник, на публичната страница за регистрация и в потребителския профил. Няма ефект, когато ORCID OAuth е активен."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Въведете пълния ORCID iD във формат https://orcid.org/0000-0002-1825-0097 (или само 16-те цифри)."

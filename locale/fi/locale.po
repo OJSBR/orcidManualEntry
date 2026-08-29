@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: fi\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Manuaalinen ORCID (kirjoitettava)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Palauttaa kirjoitettavan ORCID-kentän, kun ORCID-todennusta (OAuth) ei ole määritetty, kuten aiemmissa OJS-versioissa: kirjoittajan/tekijän lomakkeella, julkisella rekisteröitymissivulla ja käyttäjäprofiilissa. Ei vaikuta, kun ORCID OAuth on käytössä."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Syötä koko ORCID iD muodossa https://orcid.org/0000-0002-1825-0097 (tai pelkät 16 numeroa)."

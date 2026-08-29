@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: ar\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "ORCID يدوي (قابل للكتابة)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "يعيد حقل ORCID القابل للكتابة عندما لا تكون مصادقة ORCID (OAuth) مضبوطة، كما في إصدارات OJS السابقة: في نموذج المؤلف/المساهم، وفي صفحة تسجيل المستخدمين العلنية، وفي الملف الشخصي للمستخدم. ولا أثر له عندما يكون ORCID OAuth مفعّلاً."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "أدخل معرّف ORCID كاملاً، بالصيغة https://orcid.org/0000-0002-1825-0097 (أو الأرقام الستة عشر فقط)."

@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: fa\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "ORCID دستی (قابل تایپ)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "وقتی احراز هویت ORCID (OAuth) پیکربندی نشده باشد، فیلد قابل تایپ ORCID را مانند نسخه‌های پیشین OJS بازمی‌گرداند: در فرم نویسنده/مشارکت‌کننده، در صفحهٔ ثبت‌نام عمومی و در نمایهٔ کاربر. با فعال بودن ORCID OAuth اثری ندارد."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "شناسهٔ کامل ORCID را با قالب https://orcid.org/0000-0002-1825-0097 (یا فقط ۱۶ رقم) وارد کنید."

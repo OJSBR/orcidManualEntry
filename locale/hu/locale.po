@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: hu\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Kézi ORCID (beírható)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Visszaállítja a beírható ORCID mezőt, ha az ORCID (OAuth) hitelesítés nincs beállítva, mint a korábbi OJS-verziókban: a szerző/közreműködő űrlapon, a nyilvános regisztrációs oldalon és a felhasználói profilban. Nincs hatása, ha az ORCID OAuth aktív."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Adja meg a teljes ORCID iD-t https://orcid.org/0000-0002-1825-0097 formában (vagy csak a 16 számjegyet)."

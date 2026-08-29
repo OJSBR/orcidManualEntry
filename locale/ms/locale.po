@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: ms\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "ORCID manual (boleh ditaip)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Memulihkan medan ORCID yang boleh ditaip apabila pengesahan ORCID (OAuth) tidak dikonfigurasikan, seperti dalam versi OJS terdahulu: dalam borang penulis/penyumbang, pada halaman pendaftaran awam dan dalam profil pengguna. Tiada kesan apabila ORCID OAuth aktif."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Masukkan ORCID iD penuh, dalam format https://orcid.org/0000-0002-1825-0097 (atau 16 digit sahaja)."

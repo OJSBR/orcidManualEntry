@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: sl\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Ročni ORCID (vnosno polje)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Obnovi ročno vnosno polje ORCID, kadar preverjanje pristnosti ORCID (OAuth) ni nastavljeno, kot v prejšnjih različicah OJS: v obrazcu avtorja/sodelujočega, na javni strani za registracijo in v uporabniškem profilu. Nima učinka, kadar je ORCID OAuth aktiven."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Vnesite celoten ORCID iD v obliki https://orcid.org/0000-0002-1825-0097 (ali samo 16 števk)."

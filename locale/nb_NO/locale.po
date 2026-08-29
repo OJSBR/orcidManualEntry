@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: nb_NO\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Manuell ORCID (skrivbar)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Gjenoppretter det skrivbare ORCID-feltet når ORCID-autentisering (OAuth) ikke er konfigurert, slik det var i tidligere OJS-versjoner: i skjemaet for forfatter/bidragsyter, på den offentlige registreringssiden og i brukerprofilen. Har ingen virkning når ORCID OAuth er aktiv."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Skriv inn hele ORCID iD-en i formatet https://orcid.org/0000-0002-1825-0097 (eller bare de 16 sifrene)."

@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: az\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "Əl ilə ORCID (yazıla bilən)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "ORCID (OAuth) autentifikasiyası qurulmayıbsa, əl ilə yazılan ORCID sahəsini əvvəlki OJS versiyalarındakı kimi bərpa edir: müəllif/iştirakçı formasında, açıq qeydiyyat səhifəsində və istifadəçi profilində. ORCID OAuth aktiv olduqda təsiri yoxdur."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Tam ORCID iD-ni https://orcid.org/0000-0002-1825-0097 formatında (və ya yalnız 16 rəqəmi) daxil edin."

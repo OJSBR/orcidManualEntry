@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: zh_Hans\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "手动 ORCID（可输入）"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "当未配置 ORCID（OAuth）认证时，恢复可手动输入的 ORCID 字段，与早期 OJS 版本一致：作者/贡献者表单、公开注册页面和用户个人资料。启用 ORCID OAuth 时不产生任何影响。"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "请输入完整的 ORCID iD，格式为 https://orcid.org/0000-0002-1825-0097（或仅填 16 位数字）。"

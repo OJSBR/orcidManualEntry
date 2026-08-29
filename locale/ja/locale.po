@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: ja\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "手動ORCID（入力可）"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "ORCID（OAuth）認証が設定されていない場合に、以前の OJS と同じく入力可能な ORCID 項目を復活させます。対象は著者・寄稿者フォーム、公開登録ページ、利用者プロフィールです。ORCID OAuth が有効なときは何も変わりません。"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "ORCID iD を https://orcid.org/0000-0002-1825-0097 の形式で（または16桁の数字のみで）入力してください。"

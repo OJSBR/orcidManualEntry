@@ -1,0 +1,21 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Last-Translator: OJSBR\n"
+"Language-Team: OJSBR\n"
+"Language: id\n"
+
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.displayName"
+msgstr "ORCID manual (dapat diketik)"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.description"
+msgstr "Mengembalikan bidang ORCID yang dapat diketik ketika autentikasi ORCID (OAuth) tidak dikonfigurasi, seperti pada versi OJS sebelumnya: pada formulir penulis/kontributor, pada halaman pendaftaran publik dan pada profil pengguna. Tidak berpengaruh saat ORCID OAuth aktif."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.field.description"
+msgstr "Masukkan ORCID iD lengkap, dalam format https://orcid.org/0000-0002-1825-0097 (atau cukup 16 digitnya)."

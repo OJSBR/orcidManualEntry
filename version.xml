@@ -17,7 +17,7 @@
 <version>
 	<application>orcidManualEntry</application>
 	<type>plugins.generic</type>
-	<release>1.1.0.0</release>
+	<release>1.1.0.1</release>
 	<date>2026-08-29</date>
 	<lazy-load>1</lazy-load>
 	<class>OrcidManualEntryPlugin</class>
