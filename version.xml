@@ -7,8 +7,9 @@
   * Copyright (c) 2026 OJSBR (https://ojsbr.com.br)
   * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
   *
-  * Restores a typeable (manual) ORCID field in the author/contributor form when
-  * ORCID authentication (OAuth) is not configured. Manual entry is a fallback;
+  * Restores a typeable (manual) ORCID field when ORCID authentication (OAuth)
+  * is not configured: in the author/contributor form, on the public user
+  * registration page and in the user profile. Manual entry is a fallback;
   * authenticated ORCID (OAuth) remains the recommended approach.
   *
   * Plugin version information.
@@ -16,8 +17,8 @@
 <version>
 	<application>orcidManualEntry</application>
 	<type>plugins.generic</type>
-	<release>1.0.2.0</release>
-	<date>2026-08-03</date>
+	<release>1.1.0.0</release>
+	<date>2026-08-29</date>
 	<lazy-load>1</lazy-load>
 	<class>OrcidManualEntryPlugin</class>
 </version>

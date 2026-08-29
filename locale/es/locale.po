@@ -12,7 +12,7 @@ msgid "plugins.generic.orcidManualEntry.displayName"
 msgstr "ORCID manual (editable)"
 
 msgid "plugins.generic.orcidManualEntry.description"
-msgstr "Restaura el campo ORCID editable en el formulario de autor/colaborador cuando la autenticación ORCID (OAuth) no está configurada, como en versiones anteriores de OJS. No tiene efecto cuando ORCID OAuth está activo."
+msgstr "Restaura el campo ORCID editable cuando la autenticación ORCID (OAuth) no está configurada, como en versiones anteriores de OJS: en el formulario de autor/colaborador, en el registro público de usuario y en el perfil del usuario. No tiene efecto cuando ORCID OAuth está activo."
 
 msgid "plugins.generic.orcidManualEntry.field.description"
-msgstr "Introduzca el iD ORCID completo, en el formato https://orcid.org/0000-0002-1825-0097 (o solo los 16 dígitos). Introducción manual, sin autenticación."
+msgstr "Introduzca el iD ORCID completo, en el formato https://orcid.org/0000-0002-1825-0097 (o solo los 16 dígitos)."

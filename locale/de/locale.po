@@ -12,7 +12,7 @@ msgid "plugins.generic.orcidManualEntry.displayName"
 msgstr "Manuelle ORCID (eingebbar)"
 
 msgid "plugins.generic.orcidManualEntry.description"
-msgstr "Stellt das eingebbare ORCID-Feld im Autoren-/Beitragendenformular wieder her, wenn die ORCID-Authentifizierung (OAuth) nicht konfiguriert ist, wie in früheren OJS-Versionen. Ohne Wirkung, wenn ORCID OAuth aktiv ist."
+msgstr "Stellt das eingebbare ORCID-Feld wieder her, wenn die ORCID-Authentifizierung (OAuth) nicht konfiguriert ist, wie in früheren OJS-Versionen: im Autoren-/Beitragendenformular, auf der öffentlichen Registrierungsseite und im Benutzerprofil. Ohne Wirkung, wenn ORCID OAuth aktiv ist."
 
 msgid "plugins.generic.orcidManualEntry.field.description"
-msgstr "Geben Sie die vollständige ORCID-iD im Format https://orcid.org/0000-0002-1825-0097 ein (oder nur die 16 Ziffern). Manuelle Eingabe, ohne Authentifizierung."
+msgstr "Geben Sie die vollständige ORCID iD im Format https://orcid.org/0000-0002-1825-0097 an (oder nur die 16 Ziffern)."

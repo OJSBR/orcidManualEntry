@@ -12,7 +12,7 @@ msgid "plugins.generic.orcidManualEntry.displayName"
 msgstr "Manual ORCID (typeable)"
 
 msgid "plugins.generic.orcidManualEntry.description"
-msgstr "Restores the typeable ORCID field in the author/contributor form when ORCID (OAuth) authentication is not configured, as in earlier OJS versions. Has no effect when ORCID OAuth is active."
+msgstr "Restores the typeable ORCID field when ORCID (OAuth) authentication is not configured, as in earlier OJS versions: in the author/contributor form, on the public user registration page and in the user profile. Has no effect when ORCID OAuth is active."
 
 msgid "plugins.generic.orcidManualEntry.field.description"
-msgstr "Enter the full ORCID iD, in the format https://orcid.org/0000-0002-1825-0097 (or just the 16 digits). Manual entry, without authentication."
+msgstr "Enter the full ORCID iD, in the format https://orcid.org/0000-0002-1825-0097 (or just the 16 digits)."

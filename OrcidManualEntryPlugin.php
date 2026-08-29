@@ -6,17 +6,19 @@
  * @class OrcidManualEntryPlugin
  *
  * @brief Restaura o campo ORCID digitavel (manual) no formulario de
- *        autor/contribuidor, como nas versoes anteriores do OJS.
+ *        autor/contribuidor, no cadastro publico de usuario e no perfil,
+ *        como nas versoes anteriores do OJS.
  *
  * A partir do OJS 3.4/3.5 o antigo plugin ORCID foi incorporado ao core e o
- * campo ORCID do autor passou a ser somente-leitura: so pode ser preenchido via
+ * campo ORCID passou a ser somente-leitura: so pode ser preenchido via
  * autenticacao OAuth (FieldOrcid) e, quando o OAuth nao esta configurado, o
  * campo simplesmente nao aparece. Alem disso o backend bloqueia qualquer ORCID
  * informado manualmente em Repo::author()->validate() e o endpoint de edicao de
  * contribuidor remove o ORCID dos parametros antes de salvar.
  *
- * Este plugin atua APENAS quando o ORCID OAuth NAO esta configurado no contexto,
- * neutralizando as quatro barreiras:
+ * Este plugin atua APENAS quando o ORCID OAuth NAO esta configurado no contexto.
+ *
+ * a) Contribuidor da submissao (ContributorForm), neutralizando quatro barreiras:
  *   1) Form::config::before  -> adiciona um campo 'orcid' digitavel;
  *   2) TemplateManager::display
  *                            -> publica o componente Vue 'field-orcid-manual',
@@ -28,6 +30,19 @@
  *      Author::edit          -> injeta/normaliza o ORCID informado antes da
  *                               gravacao no banco (o endpoint de edicao o remove
  *                               dos parametros, entao reinjetamos aqui).
+ *
+ * b) Cadastro publico de usuario (RegistrationForm) e perfil do usuario
+ *    (IdentityForm), onde o core esconde o campo e ignora o valor enviado
+ *    quando o OAuth esta desligado:
+ *   5) *form::display        -> liga o $orcidEnabled dos templates do core;
+ *   6) TemplateResource::getFilename
+ *                            -> troca form/orcidProfile.tpl (o widget de OAuth)
+ *                               pela versao manual deste plugin;
+ *   7) *form::Constructor    -> valida formato/checksum do que foi digitado;
+ *   8) *form::execute        -> grava o ORCID normalizado no usuario.
+ *
+ * O ORCID gravado no usuario e copiado pelo proprio core para os metadados de
+ * autoria da submissao (Repo::author()->newAuthorFromUser()).
  */
 
 namespace APP\plugins\generic\orcidManualEntry;
@@ -35,10 +50,14 @@ namespace APP\plugins\generic\orcidManualEntry;
 use APP\core\Application;
 use PKP\components\forms\FieldText;
 use PKP\components\forms\publication\ContributorForm;
+use PKP\form\Form;
+use PKP\form\validation\FormValidatorCustom;
 use PKP\orcid\OrcidManager;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\template\PKPTemplateManager;
+use PKP\user\form\IdentityForm;
+use PKP\user\form\RegistrationForm;
 use PKP\validation\ValidatorORCID;
 
 class OrcidManualEntryPlugin extends GenericPlugin
@@ -59,6 +78,11 @@ class OrcidManualEntryPlugin extends GenericPlugin
         'dashboard/editors.tpl',
         'submission/wizard.tpl',
     ];
+
+    /**
+     * Template do core substituido pela versao manual (ver overrideOrcidTemplate()).
+     */
+    public const ORCID_WIDGET_TEMPLATE = 'form/orcidProfile.tpl';
 
     /**
      * ORCID normalizado capturado em Author::validate para reaproveitar em
@@ -82,11 +106,21 @@ class OrcidManualEntryPlugin extends GenericPlugin
         }
 
         if ($this->getEnabled($mainContextId)) {
+            // Contribuidor da submissao.
             Hook::add('Form::config::before', [$this, 'addOrcidField']);
             Hook::add('TemplateManager::display', [$this, 'addFieldComponent']);
             Hook::add('Author::validate', [$this, 'allowManualOrcid']);
             Hook::add('Author::add::before', [$this, 'applyOrcidOnAdd']);
             Hook::add('Author::edit', [$this, 'applyOrcidOnEdit']);
+
+            // Cadastro publico e perfil do usuario.
+            Hook::add('TemplateResource::getFilename', [$this, 'overrideOrcidTemplate']);
+            Hook::add('registrationform::display', [$this, 'enableUserOrcidField']);
+            Hook::add('identityform::display', [$this, 'enableUserOrcidField']);
+            Hook::add('registrationform::Constructor', [$this, 'addUserOrcidCheck']);
+            Hook::add('identityform::Constructor', [$this, 'addUserOrcidCheck']);
+            Hook::add('registrationform::execute', [$this, 'saveRegistrationOrcid']);
+            Hook::add('identityform::execute', [$this, 'saveIdentityOrcid']);
         }
 
         return true;
@@ -287,6 +321,222 @@ class OrcidManualEntryPlugin extends GenericPlugin
         self::$hasPending = false;
 
         return Hook::CONTINUE;
+    }
+
+    //
+    // Cadastro publico de usuario e perfil do usuario
+    //
+
+    /**
+     * Barreira 5: liga o campo ORCID nos templates do core.
+     *
+     * Tanto templates/user/identityForm.tpl quanto
+     * templates/frontend/pages/userRegister.tpl so mostram qualquer coisa de
+     * ORCID sob `{if $orcidEnabled}`, e as duas classes de formulario atribuem
+     * essa variavel como false quando OrcidManager::isEnabled() e false --
+     * exatamente a situacao em que este plugin trabalha. O hook `*form::display`
+     * roda em Form::fetch(), ou seja, DEPOIS que o formulario ja atribuiu suas
+     * variaveis, entao basta sobrescrever.
+     *
+     * As demais variaveis do widget de OAuth (orcidOAuthUrl, orcidIcon...) nao
+     * sao atribuidas de proposito: quem as usaria e o form/orcidProfile.tpl do
+     * core, substituido em overrideOrcidTemplate() pela versao manual.
+     *
+     * $args[0] e o formulario; $args[1] e a saida (por referencia), que nao
+     * tocamos -- devolver Hook::CONTINUE mantem o fluxo normal do fetch.
+     */
+    public function enableUserOrcidField(string $hookName, array $args): bool
+    {
+        if ($this->orcidOAuthActive()) {
+            return Hook::CONTINUE;
+        }
+
+        $form = $args[0];
+        $request = Application::get()->getRequest();
+        $templateMgr = PKPTemplateManager::getManager($request);
+
+        $templateMgr->assign([
+            'orcidEnabled' => true,
+            'orcidManualEntry' => true,
+            'targetOp' => $form instanceof RegistrationForm ? 'register' : 'profile',
+            // O core so renderiza o botao "excluir ORCID" com orcidAuthenticated
+            // verdadeiro; no modo manual nada e autenticado, e apagar o ORCID e
+            // simplesmente limpar o campo.
+            'orcidAuthenticated' => false,
+            'orcidManualDescription' => __('plugins.generic.orcidManualEntry.field.description'),
+        ]);
+
+        return Hook::CONTINUE;
+    }
+
+    /**
+     * Barreira 6: troca o widget de OAuth pela versao manual.
+     *
+     * form/orcidProfile.tpl e o unico ponto de ORCID do cadastro publico (o
+     * userRegister.tpl nao tem campo proprio: o core so inclui esse template) e
+     * e tambem o que, no perfil, esconde por JavaScript o input de texto que o
+     * identityForm.tpl acabou de desenhar. Substituindo esse unico arquivo os
+     * dois problemas somem de uma vez, sem sobrescrever nenhum template grande
+     * do core (e sem disputar com temas, que raramente tocam nele).
+     *
+     * $args[0] chega por referencia a partir de PKPTemplateResource::_getFilename().
+     */
+    public function overrideOrcidTemplate(string $hookName, array $args): bool
+    {
+        $filePath = &$args[0];
+        $template = $args[1];
+
+        if ($template !== self::ORCID_WIDGET_TEMPLATE) {
+            return Hook::CONTINUE;
+        }
+        if ($this->orcidOAuthActive()) {
+            return Hook::CONTINUE;
+        }
+
+        $override = $this->getPluginPath() . '/templates/' . self::ORCID_WIDGET_TEMPLATE;
+        if (file_exists($override)) {
+            $filePath = $override;
+        }
+
+        return Hook::CONTINUE;
+    }
+
+    /**
+     * Barreira 7: valida o que foi digitado.
+     *
+     * O hook `*form::Constructor` roda no fim de Form::__construct(), quando a
+     * lista de verificacoes ja existe e antes de qualquer validate(). Como o
+     * campo e opcional, um valor vazio passa direto; um valor preenchido tem de
+     * ser um ORCID valido em formato e digito verificador.
+     */
+    public function addUserOrcidCheck(string $hookName, array $args): bool
+    {
+        if ($this->orcidOAuthActive()) {
+            return Hook::CONTINUE;
+        }
+
+        $form = $args[0];
+        if (!$form instanceof Form) {
+            return Hook::CONTINUE;
+        }
+
+        $form->addCheck(new FormValidatorCustom(
+            $form,
+            'orcid',
+            'optional',
+            'user.orcid.orcidInvalid',
+            function ($orcid) {
+                $normalized = self::normalizeOrcid($orcid);
+                return $normalized === '' || self::isValidOrcid($normalized);
+            }
+        ));
+
+        return Hook::CONTINUE;
+    }
+
+    /**
+     * Barreira 8a: grava o ORCID no usuario recem-cadastrado.
+     *
+     * RegistrationForm::readInputData() ja le a variavel 'orcid' do POST, mas o
+     * execute() do core so a aplica quando OrcidManager::isEnabled(). O hook
+     * `registrationform::execute` roda dentro de Form::execute(), chamado pelo
+     * proprio RegistrationForm::execute() ANTES do Repo::user()->add(), e o
+     * usuario em construcao esta na propriedade publica $form->user justamente
+     * para este tipo de uso.
+     */
+    public function saveRegistrationOrcid(string $hookName, array $args): bool
+    {
+        if ($this->orcidOAuthActive()) {
+            return Hook::CONTINUE;
+        }
+
+        $form = $args[0];
+        if (!$form instanceof RegistrationForm || !isset($form->user)) {
+            return Hook::CONTINUE;
+        }
+
+        $orcid = self::readSubmittedOrcid($form);
+        if ($orcid === false) {
+            return Hook::CONTINUE;
+        }
+
+        $form->user->setOrcid($orcid);
+        $form->user->setOrcidVerified(false);
+
+        return Hook::CONTINUE;
+    }
+
+    /**
+     * Barreira 8b: grava o ORCID editado no perfil.
+     *
+     * IdentityForm::execute() nunca aplica o ORCID: o unico tratamento que ele
+     * da ao campo e o "removeOrcidId", do fluxo de OAuth. O hook roda em
+     * Form::execute(), chamado por BaseProfileForm::execute() imediatamente
+     * antes do Repo::user()->edit($user) -- e sobre esse mesmo objeto de usuario
+     * ($request->getUser()) que gravamos.
+     */
+    public function saveIdentityOrcid(string $hookName, array $args): bool
+    {
+        if ($this->orcidOAuthActive()) {
+            return Hook::CONTINUE;
+        }
+
+        $form = $args[0];
+        if (!$form instanceof IdentityForm) {
+            return Hook::CONTINUE;
+        }
+        // Pedido de remocao do token de OAuth: e o proprio core quem trata.
+        if ($form->getData('removeOrcidId') === 'true') {
+            return Hook::CONTINUE;
+        }
+
+        $orcid = self::readSubmittedOrcid($form);
+        if ($orcid === false) {
+            return Hook::CONTINUE;
+        }
+
+        $user = Application::get()->getRequest()->getUser();
+        if (!$user) {
+            return Hook::CONTINUE;
+        }
+
+        if ($orcid === null && !empty($user->getOrcid())) {
+            error_log(sprintf(
+                '[orcidManualEntry] Removendo o ORCID %s do usuario %d (campo enviado vazio).',
+                $user->getOrcid(),
+                (int) $user->getId()
+            ));
+        }
+
+        $user->setOrcid($orcid);
+        $user->setOrcidVerified(false);
+
+        return Hook::CONTINUE;
+    }
+
+    /**
+     * Le o ORCID enviado pelo formulario e o devolve normalizado.
+     *
+     * @return string|null|false A URL canonica; null para limpar o valor;
+     *                           false quando a requisicao nao trouxe o campo --
+     *                           caso em que nada deve ser tocado, para que um
+     *                           POST sem o campo nunca apague um ORCID gravado.
+     */
+    private static function readSubmittedOrcid(Form $form)
+    {
+        $raw = $form->getData('orcid');
+        if ($raw === null) {
+            return false;
+        }
+
+        $normalized = self::normalizeOrcid($raw);
+        if ($normalized === '') {
+            return null;
+        }
+
+        // A validacao ja barrou valores invalidos; esta guarda cobre o caso de
+        // um formulario que tenha executado sem passar por validate().
+        return self::isValidOrcid($normalized) ? $normalized : false;
     }
 
     /**
