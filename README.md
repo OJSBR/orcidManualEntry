@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.0.1-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.1.1.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.0.1/orcidManualEntry-1.1.0.1.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.1.0/orcidManualEntry-1.1.1.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -26,7 +26,7 @@ the field: the **author/contributor form**, the **public user registration page*
 
 | OJS version | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.0.1 |
+| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.1.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -56,6 +56,11 @@ need to record iDs. It is a pragmatic fallback, not a replacement for authentica
 - Accepts the bare iD (`0000-0002-1825-0097`) or the URL, and **normalizes** it to the
   canonical `https://orcid.org/0000-0002-1825-0097` the core expects.
 - Keeps the core's **format + checksum validation**: an invalid iD is rejected.
+- **Refuses an iD that already belongs to another contributor of the same publication**, naming
+  the contributor who holds it. The core does not check this, and two authors sharing one iD
+  are only noticed at the Crossref deposit, where they become the same researcher. The
+  comparison is made on the 16 digits, so the same iD stored once as `orcid.org` and once as
+  `sandbox.orcid.org` is still caught.
 - Shows the stored iD again when *Edit contributor* is reopened, so re-saving a contributor
   never wipes it.
 
@@ -171,7 +176,7 @@ do usuário**.
 
 | Versão do OJS | Branch | Release do plugin |
 |---------------|--------|-------------------|
-| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.0.1 |
+| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.1.0 |
 
 Vale também para o OJS 3.4.x, onde a mesma restrição do núcleo foi introduzida.
 
@@ -202,6 +207,10 @@ alternativa pragmática, não um substituto da autenticação.
 - Aceita o iD nu (`0000-0002-1825-0097`) ou a URL e **normaliza** para
   `https://orcid.org/0000-0002-1825-0097`.
 - Mantém a **validação de formato e dígito verificador** do núcleo: iD inválido é rejeitado.
+- **Recusa o iD que já pertence a outro contribuidor da mesma publicação**, dizendo de quem ele
+  é. O núcleo não faz essa conferência, e dois autores com o mesmo iD só aparecem no depósito
+  do Crossref, onde viram o mesmo pesquisador. A comparação é feita pelos 16 dígitos, então o
+  mesmo iD gravado uma vez como `orcid.org` e outra como `sandbox.orcid.org` também é pego.
 - Reexibe o iD gravado ao reabrir *Editar contribuidor*, de modo que salvar o contribuidor
   de novo nunca apaga o ORCID.
 
