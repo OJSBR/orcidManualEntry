@@ -19,3 +19,6 @@ msgstr "Վերականգնում է ձեռքով լրացվող ORCID դաշտը
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Մուտքագրեք ամբողջական ORCID iD-ն՝ https://orcid.org/0000-0002-1825-0097 ձևաչափով (կամ միայն 16 թվանշանը)։"
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Այս ORCID iD-ն արդեն վերագրված է այս ներկայացման մեկ այլ մասնակցի ({$name})։"

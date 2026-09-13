@@ -16,3 +16,6 @@ msgstr "Restaure le champ ORCID saisissable lorsque l'authentification ORCID (OA
 
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Indiquez l'identifiant ORCID complet, au format https://orcid.org/0000-0002-1825-0097 (ou seulement les 16 chiffres)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Cet iD ORCID est déjà attribué à un autre contributeur de cette soumission ({$name})."

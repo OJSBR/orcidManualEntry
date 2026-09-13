@@ -16,3 +16,6 @@ msgstr "Restaura o campo ORCID digitável quando a autenticação ORCID (OAuth) 
 
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Informe o iD ORCID completo, no formato https://orcid.org/0000-0002-1825-0097 (ou apenas os 16 dígitos)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Este ORCID iD já está atribuído a outro contribuidor desta submissão ({$name})."

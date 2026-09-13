@@ -19,3 +19,6 @@ msgstr "Memulihkan medan ORCID yang boleh ditaip apabila pengesahan ORCID (OAuth
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Masukkan ORCID iD penuh, dalam format https://orcid.org/0000-0002-1825-0097 (atau 16 digit sahaja)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "ORCID iD ini telah pun diberikan kepada penyumbang lain bagi penyerahan ini ({$name})."

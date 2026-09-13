@@ -19,3 +19,6 @@ msgstr "ORCID（OAuth）認証が設定されていない場合に、以前の O
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "ORCID iD を https://orcid.org/0000-0002-1825-0097 の形式で（または16桁の数字のみで）入力してください。"
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "この ORCID iD は、この投稿の別の寄稿者（{$name}）にすでに割り当てられています。"

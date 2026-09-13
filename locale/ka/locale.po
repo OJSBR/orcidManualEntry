@@ -19,3 +19,6 @@ msgstr "აღადგენს ხელით შესავსებ ORCID 
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "შეიყვანეთ სრული ORCID iD ფორმატში https://orcid.org/0000-0002-1825-0097 (ან მხოლოდ 16 ციფრი)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "ეს ORCID iD უკვე მინიჭებული აქვს ამ წარდგენის სხვა თანაავტორს ({$name})."

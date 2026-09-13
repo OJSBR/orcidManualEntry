@@ -19,3 +19,6 @@ msgstr "يعيد حقل ORCID القابل للكتابة عندما لا تكو
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "أدخل معرّف ORCID كاملاً، بالصيغة https://orcid.org/0000-0002-1825-0097 (أو الأرقام الستة عشر فقط)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "معرّف ORCID هذا مُسند بالفعل إلى مساهم آخر في هذا التقديم ({$name})."

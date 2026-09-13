@@ -19,3 +19,6 @@ msgstr "Återställer det skrivbara ORCID-fältet när ORCID-autentisering (OAut
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Ange hela ORCID iD:t i formatet https://orcid.org/0000-0002-1825-0097 (eller bara de 16 siffrorna)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Detta ORCID iD är redan tilldelat en annan bidragsgivare till detta bidrag ({$name})."

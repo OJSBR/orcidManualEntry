@@ -19,3 +19,6 @@ msgstr "Palauttaa kirjoitettavan ORCID-kentän, kun ORCID-todennusta (OAuth) ei 
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Syötä koko ORCID iD muodossa https://orcid.org/0000-0002-1825-0097 (tai pelkät 16 numeroa)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Tämä ORCID iD on jo liitetty toiseen tämän käsikirjoituksen tekijään ({$name})."

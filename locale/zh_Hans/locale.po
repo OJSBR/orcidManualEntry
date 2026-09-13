@@ -19,3 +19,6 @@ msgstr "当未配置 ORCID（OAuth）认证时，恢复可手动输入的 ORCID 
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "请输入完整的 ORCID iD，格式为 https://orcid.org/0000-0002-1825-0097（或仅填 16 位数字）。"
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "此 ORCID iD 已分配给本稿件的另一位贡献者（{$name}）。"

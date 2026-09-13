@@ -19,3 +19,6 @@ msgstr "ORCID (OAuth) autentifikasiyası qurulmayıbsa, əl ilə yazılan ORCID 
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Tam ORCID iD-ni https://orcid.org/0000-0002-1825-0097 formatında (və ya yalnız 16 rəqəmi) daxil edin."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Bu ORCID iD artıq bu təqdimatın başqa bir iştirakçısına ({$name}) təyin edilib."

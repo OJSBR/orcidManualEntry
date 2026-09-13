@@ -19,3 +19,6 @@ msgstr "Επαναφέρει το πεδίο ORCID με πληκτρολόγησ
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Εισαγάγετε το πλήρες ORCID iD, στη μορφή https://orcid.org/0000-0002-1825-0097 (ή μόνο τα 16 ψηφία)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Αυτό το ORCID iD έχει ήδη αποδοθεί σε άλλον συνεργάτη αυτής της υποβολής ({$name})."

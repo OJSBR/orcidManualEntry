@@ -19,3 +19,6 @@ msgstr "ORCID (OAuth) kimlik doğrulaması yapılandırılmadığında, elle yaz
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Tam ORCID kimliğini https://orcid.org/0000-0002-1825-0097 biçiminde (veya yalnızca 16 rakam olarak) girin."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Bu ORCID kimliği bu gönderinin başka bir katkıcısına zaten atanmış ({$name})."

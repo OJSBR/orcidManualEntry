@@ -16,3 +16,6 @@ msgstr "Stellt das eingebbare ORCID-Feld wieder her, wenn die ORCID-Authentifizi
 
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Geben Sie die vollständige ORCID iD im Format https://orcid.org/0000-0002-1825-0097 an (oder nur die 16 Ziffern)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Diese ORCID iD ist bereits einem anderen Beitragenden dieser Einreichung zugeordnet ({$name})."

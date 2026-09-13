@@ -19,3 +19,6 @@ msgstr "Го враќа полето ORCID за рачно внесување к
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Внесете го целосниот ORCID iD во форматот https://orcid.org/0000-0002-1825-0097 (или само 16-те цифри)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Овој ORCID iD веќе му е доделен на друг соработник на овој труд ({$name})."

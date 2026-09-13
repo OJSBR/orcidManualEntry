@@ -19,3 +19,6 @@ msgstr "Vraća ORCID polje za unos kada ORCID (OAuth) autentifikacija nije pode�
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Unesite ceo ORCID iD, u formatu https://orcid.org/0000-0002-1825-0097 (ili samo 16 cifara)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Ovaj ORCID iD je već dodeljen drugom saradniku ovog priloga ({$name})."

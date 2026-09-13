@@ -48,6 +48,7 @@
 namespace APP\plugins\generic\orcidManualEntry;
 
 use APP\core\Application;
+use APP\facades\Repo;
 use PKP\components\forms\FieldText;
 use PKP\components\forms\publication\ContributorForm;
 use PKP\form\Form;
@@ -263,7 +264,19 @@ class OrcidManualEntryPlugin extends GenericPlugin
             // Campo vazio: nao ha ORCID para gravar, remove qualquer erro de ORCID.
             unset($args[0]['orcid']);
         } elseif (self::isValidOrcid($normalized)) {
-            // Formato valido: remove o bloqueio do core e o erro de formato do valor cru.
+            // Formato valido. Antes de liberar, recusa o iD que ja pertence a
+            // outro contribuidor da MESMA publicacao: o core nao checa isso, e
+            // dois autores com o mesmo ORCID passam batido ate o deposito no
+            // Crossref, onde viram o mesmo pesquisador.
+            $duplicado = $this->duplicateOrcidHolder($args[1] ?? null, $props, $normalized);
+            if ($duplicado !== null) {
+                $args[0]['orcid'] = [__('plugins.generic.orcidManualEntry.error.duplicateOrcid', ['name' => $duplicado])];
+                // Nada a gravar: as etapas de gravacao nao devem reinjetar o valor.
+                self::$hasPending = false;
+                self::$pendingOrcid = null;
+                return Hook::CONTINUE;
+            }
+            // Remove o bloqueio do core e o erro de formato do valor cru.
             unset($args[0]['orcid']);
         } else {
             // Valor invalido: mantem apenas a mensagem de ORCID invalido.
@@ -547,6 +560,53 @@ class OrcidManualEntryPlugin extends GenericPlugin
      *
      * @param mixed $raw
      */
+    /**
+     * Nome do contribuidor da mesma publicacao que ja usa este ORCID, ou null se
+     * nao houver nenhum.
+     *
+     * O proprio contribuidor em edicao e ignorado, senao reeditar um autor sem
+     * mexer no ORCID acusaria conflito com ele mesmo. Ao ADICIONAR, $author
+     * chega nulo e a publicacao vem dos parametros enviados.
+     *
+     * A comparacao e feita pelo iD (os 16 digitos), nao pela URL: o mesmo
+     * pesquisador gravado uma vez como orcid.org e outra como sandbox.orcid.org
+     * continua sendo a mesma pessoa.
+     */
+    private function duplicateOrcidHolder($author, array $props, string $normalized): ?string
+    {
+        $publicationId = (int) ($props['publicationId'] ?? 0);
+        if (!$publicationId && $author) {
+            $publicationId = (int) $author->getData('publicationId');
+        }
+        $id = self::orcidId($normalized);
+        if (!$publicationId || $id === '') {
+            return null;
+        }
+
+        $currentId = $author ? (int) $author->getId() : 0;
+        foreach (Repo::author()->getCollector()->filterByPublicationIds([$publicationId])->getMany() as $other) {
+            if ($currentId && (int) $other->getId() === $currentId) {
+                continue;
+            }
+            if (self::orcidId((string) $other->getData('orcid')) === $id) {
+                return $other->getFullName();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Os 16 digitos de um ORCID (0000-0002-1825-0097), venha ele como iD nu ou
+     * como URL de producao ou de sandbox. String vazia quando nao ha iD.
+     */
+    public static function orcidId(string $value): string
+    {
+        return preg_match('#(\d{4}-\d{4}-\d{4}-\d{3}[0-9Xx])#', $value, $m)
+            ? strtoupper($m[1])
+            : '';
+    }
+
     public static function normalizeOrcid($raw): string
     {
         $v = trim((string) $raw);

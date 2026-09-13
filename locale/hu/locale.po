@@ -19,3 +19,6 @@ msgstr "Visszaállítja a beírható ORCID mezőt, ha az ORCID (OAuth) hitelesí
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Adja meg a teljes ORCID iD-t https://orcid.org/0000-0002-1825-0097 formában (vagy csak a 16 számjegyet)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Ez az ORCID iD már hozzá van rendelve a beküldés egy másik közreműködőjéhez ({$name})."

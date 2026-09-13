@@ -19,3 +19,6 @@ msgstr "Przywraca wpisywane pole ORCID, gdy uwierzytelnianie ORCID (OAuth) nie j
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Podaj pełny ORCID iD w formacie https://orcid.org/0000-0002-1825-0097 (albo same 16 cyfr)."
+
+msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
+msgstr "Ten identyfikator ORCID jest już przypisany do innego współautora tego zgłoszenia ({$name})."
