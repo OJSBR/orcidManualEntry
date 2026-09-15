@@ -100,38 +100,40 @@ class OrcidManualEntryPlugin extends GenericPlugin
     private static bool $hasPending = false;
 
     /**
-     * @copydoc Plugin::register()
+     * Register the plugin and, where it is enabled, its hooks.
      *
-     * @param null|mixed $mainContextId
+     * @param string $category
+     * @param string $path
+     * @param null|int $mainContextId
      */
-    public function register($category, $path, $mainContextId = null)
+    public function register($category, $path, $mainContextId = null): bool
     {
-        if (!parent::register($category, $path, $mainContextId)) {
-            return false;
+        $success = parent::register($category, $path, $mainContextId);
+        // Contributors, registration and profiles are always edited in a journal request.
+        if (!$success || Application::isUnderMaintenance() || !$this->getEnabled($mainContextId)) {
+            return $success;
         }
 
-        if ($this->getEnabled($mainContextId)) {
-            // Submission contributor.
-            Hook::add('Form::config::before', [$this, 'addOrcidField']);
-            Hook::add('TemplateManager::display', [$this, 'addFieldComponent']);
-            Hook::add('Author::validate', [$this, 'allowManualOrcid']);
-            Hook::add('Author::add::before', [$this, 'applyOrcidOnAdd']);
-            Hook::add('Author::edit', [$this, 'applyOrcidOnEdit']);
+        // Submission contributor.
+        Hook::add('Form::config::before', $this->addOrcidField(...));
+        Hook::add('TemplateManager::display', $this->addFieldComponent(...));
+        Hook::add('Author::validate', $this->allowManualOrcid(...));
+        Hook::add('Author::add::before', $this->applyOrcidOnAdd(...));
+        Hook::add('Author::edit', $this->applyOrcidOnEdit(...));
 
-            // Public registration and user profile.
-            Hook::add('registrationform::display', [$this, 'addUserOrcidField']);
-            Hook::add('identityform::display', [$this, 'addUserOrcidField']);
-            Hook::add('registrationform::Constructor', [$this, 'addUserOrcidCheck']);
-            Hook::add('identityform::Constructor', [$this, 'addUserOrcidCheck']);
-            Hook::add('registrationform::execute', [$this, 'saveRegistrationOrcid']);
-            Hook::add('identityform::execute', [$this, 'saveIdentityOrcid']);
-        }
+        // Public registration and user profile.
+        Hook::add('registrationform::display', $this->addUserOrcidField(...));
+        Hook::add('identityform::display', $this->addUserOrcidField(...));
+        Hook::add('registrationform::Constructor', $this->addUserOrcidCheck(...));
+        Hook::add('identityform::Constructor', $this->addUserOrcidCheck(...));
+        Hook::add('registrationform::execute', $this->saveRegistrationOrcid(...));
+        Hook::add('identityform::execute', $this->saveIdentityOrcid(...));
 
-        return true;
+        return $success;
     }
 
     /**
-     * @copydoc Plugin::getDisplayName()
+     * Name shown in the plugins list.
      */
     public function getDisplayName(): string
     {
@@ -139,7 +141,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * @copydoc Plugin::getDescription()
+     * Description shown in the plugins list.
      */
     public function getDescription(): string
     {
@@ -163,7 +165,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * Form::config::before is fired through Hook::run, so the form arrives as
      * the second parameter of the callback (not inside an array).
      */
-    public function addOrcidField(string $hookName, $form): bool
+    public function addOrcidField($hookName, $form): bool
     {
         if (!$form instanceof ContributorForm) {
             return Hook::CONTINUE;
@@ -208,7 +210,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      *
      * @param array $args [$templateMgr, &$template, &$output]
      */
-    public function addFieldComponent(string $hookName, array $args): bool
+    public function addFieldComponent($hookName, $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
@@ -244,7 +246,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * array in the second parameter; $args[0] is the $errors array (by reference)
      * and $args[2] the submitted $props.
      */
-    public function allowManualOrcid(string $hookName, array $args): bool
+    public function allowManualOrcid($hookName, $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
@@ -290,7 +292,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
     /**
      * Barrier 4a: stores the ORCID when a contributor is ADDED.
      */
-    public function applyOrcidOnAdd(string $hookName, array $args): bool
+    public function applyOrcidOnAdd($hookName, $args): bool
     {
         if ($this->orcidOAuthActive() || !self::$hasPending) {
             return Hook::CONTINUE;
@@ -314,7 +316,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      *
      * $args[0] is the author about to be stored; $args[1] the author as it is now.
      */
-    public function applyOrcidOnEdit(string $hookName, array $args): bool
+    public function applyOrcidOnEdit($hookName, $args): bool
     {
         if ($this->orcidOAuthActive() || !self::$hasPending) {
             return Hook::CONTINUE;
@@ -352,7 +354,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * form is rendered. $args[0] is the form; returning Hook::CONTINUE keeps the
      * normal fetch.
      */
-    public function addUserOrcidField(string $hookName, array $args): bool
+    public function addUserOrcidField($hookName, $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
@@ -365,9 +367,11 @@ class OrcidManualEntryPlugin extends GenericPlugin
         }
 
         $templateMgr = PKPTemplateManager::getManager(Application::get()->getRequest());
+        // Named: Smarty calls every closure filter "closure", so an unnamed one would replace, or be
+        // replaced by, the output filter of another plugin in the same request.
         $templateMgr->registerFilter('output', function (string $output) use ($form, $formKey): string {
             return self::insertUserOrcidField($output, self::USER_FORM_IDS[$formKey], self::renderUserOrcidField($form, $formKey === 'registrationform'));
-        });
+        }, 'orcidManualEntryUserField');
 
         return Hook::CONTINUE;
     }
@@ -441,7 +445,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * empty value passes, a filled one must be a valid ORCID in format and check
      * digit.
      */
-    public function addUserOrcidCheck(string $hookName, array $args): bool
+    public function addUserOrcidCheck($hookName, $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
@@ -475,7 +479,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * RegistrationForm::execute() BEFORE Repo::user()->add(), and the user being
      * built is in the public $form->user property for exactly this kind of use.
      */
-    public function saveRegistrationOrcid(string $hookName, array $args): bool
+    public function saveRegistrationOrcid($hookName, $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
@@ -506,7 +510,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * Repo::user()->edit($user) -- and it is that same user object
      * ($request->getUser()) that is written here.
      */
-    public function saveIdentityOrcid(string $hookName, array $args): bool
+    public function saveIdentityOrcid($hookName, $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
@@ -621,7 +625,6 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * bare iD (16 digits) or the URL with or without protocol. Unrecognized values
      * are returned as they are, so that they fail validation.
      *
-     * @param mixed $raw
      */
     public static function normalizeOrcid($raw): string
     {

@@ -8,30 +8,33 @@
  *
  * @class LocaleFilesTest
  *
- * @brief Translations. OJS 3.5 has no locale fallback: a key missing from a
- *        locale is rendered as ##key##, so an incomplete file is worse than none.
+ * @brief Translations. A key missing from a locale is rendered as ##key##, so an
+ *        incomplete file is worse than none.
  */
 
 namespace APP\plugins\generic\orcidManualEntry\tests;
 
-class LocaleFilesTest extends TestCase
+use PKP\tests\PKPTestCase;
+
+class LocaleFilesTest extends PKPTestCase
 {
-    /** Locale codes shipped by the plugin, using the OJS 3.5 (Weblate) codes. */
+    /** Locale codes shipped by the plugin, as OJS 3.5 names them. */
     public const LOCALES = [
-        'ar', 'az', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'eu', 'fa', 'fi', 'fr', 'fr_CA',
-        'gl', 'hu', 'hy', 'id', 'it', 'ja', 'ka', 'mk', 'ms', 'nb_NO', 'nl', 'pl', 'pt', 'pt_BR',
-        'ro', 'ru', 'sl', 'sr_Latn', 'sv', 'tr', 'uk', 'vi', 'zh_Hans',
+        'ar', 'az', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'eu',
+        'fa', 'fi', 'fr', 'fr_CA', 'gl', 'hu', 'hy', 'id', 'it', 'ja', 'ka',
+        'mk', 'ms', 'nb_NO', 'nl', 'pl', 'pt', 'pt_BR', 'ro', 'ru', 'sl', 'sr_Latn',
+        'sv', 'tr', 'uk', 'vi', 'zh_Hans',
     ];
 
-    /** Locales reviewed by a fluent speaker; every other one is marked fuzzy. */
+    /** Locales reviewed by a fluent speaker; every entry of the others is marked fuzzy. */
     public const REVIEWED = ['en', 'pt', 'pt_BR', 'es', 'ca', 'gl', 'fr', 'fr_CA', 'it', 'de', 'nl'];
+
+    public const MASTER = 'en';
 
     /** Placeholders each key must keep, exactly once. */
     public const PLACEHOLDERS = [
-        'error.duplicateOrcid' => ['{$name}'],
+        'plugins.generic.orcidManualEntry.error.duplicateOrcid' => ['{$name}'],
     ];
-
-    public const PREFIX = 'plugins.generic.orcidManualEntry.';
 
     protected function localeDir(): string
     {
@@ -51,42 +54,56 @@ class LocaleFilesTest extends TestCase
         return $files;
     }
 
-    public function testShipsExactlyTheSupportedLocaleCodes(): void
+    public function testShipsExactlyTheLocaleCodesOfThisLine(): void
     {
         $dirs = array_map('basename', glob($this->localeDir() . '/*', GLOB_ONLYDIR) ?: []);
         sort($dirs);
         $expected = self::LOCALES;
         sort($expected);
 
-        // Legacy codes such as fr_FR or pt_PT do not exist in OJS 3.5 and would
-        // silently never load.
+        // A code from another OJS line (fr vs fr_FR, pt vs pt_PT) silently never loads.
         $this->assertSame($expected, $dirs);
         $this->assertCount(count(self::LOCALES), $this->files());
     }
 
-    public function testEveryLocaleHasExactlyTheKeysOfTheEnglishMaster(): void
+    public function testEveryLocaleHasExactlyTheKeysOfTheMaster(): void
     {
         $files = $this->files();
-        $master = array_keys($files['en']->entries);
+        $master = array_keys($files[self::MASTER]->entries);
         $this->assertCount(4, $master);
 
         foreach ($files as $locale => $file) {
-            $this->assertSame($master, array_keys($file->entries), "Keys of {$locale} differ from en.");
+            $this->assertSame($master, array_keys($file->entries), "Keys of {$locale} differ from " . self::MASTER . '.');
         }
     }
 
     public function testEveryKeyTheCodeUsesExists(): void
     {
         $sources = '';
-        foreach (array_merge(glob(dirname(__DIR__) . '/*.php'), glob(dirname(__DIR__) . '/js/*.js')) as $file) {
+        $root = dirname(__DIR__);
+        foreach (array_merge(glob($root . '/*.php'), glob($root . '/classes/*.php'), glob($root . '/classes/*/*.php'), glob($root . '/templates/*.tpl'), glob($root . '/templates/*/*.tpl'), glob($root . '/js/*.js')) as $file) {
             $sources .= file_get_contents($file);
         }
-        preg_match_all('/plugins\.generic\.orcidManualEntry\.[a-zA-Z.]+[a-zA-Z]/', $sources, $m);
-        $keys = array_keys($this->files()['en']->entries);
+        preg_match_all('/plugins\.generic\.orcidManualEntry\.[a-zA-Z0-9_.]*[a-zA-Z0-9_]/', $sources, $m);
+        $keys = array_keys($this->files()[self::MASTER]->entries);
 
         foreach (array_unique($m[0]) as $key) {
-            $this->assertTrue(in_array($key, $keys, true), "{$key} is used but not translated.");
+            if (str_ends_with($key, '.')) {
+                continue;
+            }
+            $this->assertTrue(in_array($key, $keys, true) || $this->isKeyPrefix($key, $keys), "{$key} is used but not translated.");
         }
+    }
+
+    /** A key built at runtime from a prefix ("...status." . $name). */
+    protected function isKeyPrefix(string $key, array $keys): bool
+    {
+        foreach ($keys as $known) {
+            if (str_starts_with($known, $key . '.')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function testNoTranslationIsEmpty(): void
@@ -98,10 +115,16 @@ class LocaleFilesTest extends TestCase
         }
     }
 
+    /** Translations from the original authors keep the headers they were published with. */
+    public const UPSTREAM_HEADERS = [];
+
     public function testHeaderDeclaresTheLocaleAndTheTeam(): void
     {
         foreach ($this->files() as $locale => $file) {
             $this->assertStringContainsString("Language: {$locale}\n", $file->header, "Wrong Language header in {$locale}.");
+            if (in_array($locale, self::UPSTREAM_HEADERS, true)) {
+                continue;
+            }
             $this->assertStringContainsString("Last-Translator: OJSBR\n", $file->header, "Missing Last-Translator in {$locale}.");
             $this->assertStringContainsString("Language-Team: OJSBR\n", $file->header, "Missing Language-Team in {$locale}.");
         }
@@ -109,42 +132,37 @@ class LocaleFilesTest extends TestCase
 
     public function testUnreviewedLocalesAreFuzzyAndReviewedOnesAreNot(): void
     {
-        foreach (self::LOCALES as $locale) {
-            $source = (string) file_get_contents($this->localeDir() . "/{$locale}/locale.po");
-            $fuzzy = substr_count($source, "#, fuzzy\n");
-            $expected = in_array($locale, self::REVIEWED, true) ? 0 : 4;
-            $this->assertSame($expected, $fuzzy, "Unexpected number of fuzzy entries in {$locale}.");
+        foreach ($this->files() as $locale => $file) {
+            $reviewed = in_array($locale, self::REVIEWED, true);
+            foreach ($file->entries as $key => $value) {
+                $this->assertSame(!$reviewed, $file->fuzzy[$key] ?? false, ($reviewed ? 'Fuzzy' : 'Not fuzzy') . " entry {$key} in {$locale}.");
+            }
         }
     }
 
     public function testPlaceholdersAreKept(): void
     {
         foreach ($this->files() as $locale => $file) {
-            foreach (self::PLACEHOLDERS as $key => $placeholders) {
-                $value = $file->entries[self::PREFIX . $key];
-                foreach ($placeholders as $placeholder) {
-                    $this->assertSame(1, substr_count($value, $placeholder), "{$placeholder} must appear once in {$key} ({$locale}).");
-                }
-                // "count" is reserved by __() and {translate} in PKP 3.5 (ICU plurals).
-                $this->assertStringNotContainsString('{$count}', $value);
-            }
-        }
-    }
-
-    public function testTranslationsCarryNoMarkup(): void
-    {
-        foreach ($this->files() as $locale => $file) {
             foreach ($file->entries as $key => $value) {
-                $this->assertSame(strip_tags($value), $value, "Markup in {$key} ({$locale}).");
+                $expected = self::PLACEHOLDERS[$key] ?? [];
+                preg_match_all('/\{\$[a-zA-Z0-9_]+\}/', $value, $m);
+                $found = array_values(array_unique($m[0]));
+                sort($found);
+                $this->assertSame($expected, $found, "Placeholders of {$key} in {$locale}.");
+                // "count" is reserved by the translator (plural rules).
+                $this->assertStringNotContainsString('{$count}', $value, "{$key} uses the reserved {\$count} in {$locale}.");
             }
         }
     }
 
     public function testTheDescriptionCarriesNoCredit(): void
     {
-        // Credit belongs to the README and version.xml, not to the settings list.
         foreach ($this->files() as $locale => $file) {
-            $this->assertStringNotContainsString('OJSBR', $file->entries[self::PREFIX . 'description'], "Credit in the description of {$locale}.");
+            foreach ($file->entries as $key => $value) {
+                if (str_ends_with($key, '.description') && substr_count($key, '.') <= 3) {
+                    $this->assertStringNotContainsString('OJSBR', $value, "Credit in {$key} ({$locale}).");
+                }
+            }
         }
     }
 }

@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.2.0-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.1.2.1-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.2.0/orcidManualEntry-1.1.2.0.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.2.1/orcidManualEntry-1.1.2.1.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -26,7 +26,7 @@ the field: the **author/contributor form**, the **public user registration page*
 
 | OJS version | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.2.0 |
+| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.2.1 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -126,37 +126,41 @@ core, and a context-enabled plugin is not loaded on that page.
 
 ## Tests
 
-- **PHP suite** (`tests/`, 18 tests): the plugin class against the installed PKP, ORCID
-  normalization, duplicate comparison by iD, where the field goes in the registration and
-  profile forms, that other output is left alone, that the submitted value is escaped, that no
-  core template is replaced and no iD reaches the server log, and the 38 translations. Run
-  either way from the OJS root:
+- **PHPUnit** (`tests/*Test.php`, on `PKP\tests\PKPTestCase`): the plugin class against the
+  installed PKP and PKP's plugin registry, ORCID normalization, duplicate comparison by iD, where
+  the field goes in the registration and profile forms, that other output is left alone, that the
+  submitted value is escaped, that the output filter is named (Smarty names every closure filter
+  "closure", so an unnamed one replaced another plugin's), that no core template is replaced and no
+  iD reaches the server log, and the 38 translations. From the OJS root:
 
   ```bash
-  php plugins/generic/orcidManualEntry/tests/run.php
   lib/pkp/lib/vendor/bin/phpunit --configuration lib/pkp/tests/phpunit.xml --no-coverage "$PWD/plugins/generic/orcidManualEntry/tests"
   ```
 
-- **Cypress** (`cypress/tests/functional/OrcidManualEntry.cy.js`): the registration page, the
-  profile (a bare iD saved as its canonical URL, a wrong check digit refused, the iD cleared)
-  and contributors through the REST endpoints the contributor form uses (iD stored, the same
-  iD refused for a second contributor even as a sandbox URL, a wrong check digit refused, the
-  iD removed). Captcha on login must be off for the run.
+- **Cypress** (`cypress/tests/functional/OrcidManualEntry.cy.js`, run by
+  [pkp-github-actions](https://github.com/pkp/pkp-github-actions) on every push): enables the
+  plugin, checks the registration page, the profile (a bare iD saved as its canonical URL, a wrong
+  check digit refused, the iD cleared and the original put back) and contributors of a submission
+  in progress through the REST endpoints the contributor form uses (iD stored, the same iD refused
+  for a second contributor even as a sandbox URL, a wrong check digit refused, the iD removed),
+  deleting the contributors it adds.
+- Verified on OJS 3.5.0.3 with ORCID OAuth off, also with the WhatsApp Contributor plugin adding
+  its own field to the registration form. Earlier manual checks (1.1.x) also covered a new
+  submission inheriting the account's iD, the contributor modal reopening with the stored iD, and
+  the plugin going inert once OAuth is on.
 
-  ```bash
-  npx cypress run --config specPattern='plugins/generic/orcidManualEntry/cypress/tests/functional/*.cy.js' \
-    --env contextPath=<journal>,adminUser=<user>,adminPassword=<password>,submissionId=<id>,publicationId=<id>,authorUserGroupId=<id>
-  ```
-
-- Verified on OJS 3.5.0.3 with ORCID OAuth off, with screenshots of the registration page and of
-  the profile showing a refused iD. Earlier manual checks (1.1.x) also covered a new submission
-  inheriting the account's iD, the contributor modal reopening with the stored iD, and the
-  plugin going inert once OAuth is on.
+Tests are kept in the repository and are not part of the release package.
 
 ## Credits & authorship
 
 - **Developed and maintained by** [OJSBR](https://ojsbr.com) — original plugin.
 - Distributed under the **GNU GPL v3**, the same license as OJS.
+
+## AI use
+
+Generative AI (Claude, by Anthropic) was used to write and run tests, improve the code and bring
+it in line with PKP standards. Every change is reviewed and tested by OJSBR, which is responsible
+for the published releases.
 
 ## Contributing
 
@@ -189,7 +193,7 @@ do usuário**.
 
 | Versão do OJS | Branch | Release do plugin |
 |---------------|--------|-------------------|
-| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.2.0 |
+| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.2.1 |
 
 Vale também para o OJS 3.4.x, onde a mesma restrição do núcleo foi introduzida.
 
@@ -249,21 +253,31 @@ nessa página.
 
 ### Testes
 
-Suíte PHP em `tests/` (18 testes, pelo `tests/run.php` ou pelo PHPUnit do PKP) e Cypress em
-`cypress/tests/functional/`, com os comandos da seção em inglês. O Cypress confere a tela de
-cadastro, o perfil (iD digitado só com os 16 dígitos gravado como URL canônica, dígito
-verificador errado recusado, iD apagado) e os contribuidores pelos mesmos endpoints REST do
-formulário (iD gravado, o mesmo iD recusado para um segundo contribuidor mesmo como URL de
-sandbox, dígito errado recusado, iD removido).
+PHPUnit em `tests/` (sobre `PKP\tests\PKPTestCase`) e Cypress em `cypress/tests/functional/`
+(rodado pelo [pkp-github-actions](https://github.com/pkp/pkp-github-actions) a cada push), com os
+comandos da seção em inglês. O Cypress confere a tela de cadastro, o perfil (iD digitado só com os
+16 dígitos gravado como URL canônica, dígito verificador errado recusado, iD apagado e o original
+devolvido) e os contribuidores de uma submissão em andamento pelos mesmos endpoints REST do
+formulário (iD gravado, o mesmo iD recusado para um segundo contribuidor mesmo como URL de sandbox,
+dígito errado recusado, iD removido), apagando os contribuidores que cria.
 
 Desde a 1.1.2.0 o campo do cadastro e do perfil entra por um filtro de saída do Smarty, sem
-substituir nenhum template do núcleo. Verificado no OJS 3.5.0.3 com o ORCID OAuth desligado,
-com capturas da tela de cadastro e do perfil recusando um iD inválido.
+substituir nenhum template do núcleo; a partir da 1.1.2.1 o filtro tem nome próprio, porque o Smarty
+chama todo filtro closure de "closure" e um apagava o de outro plugin (o campo do WhatsApp
+Contributor, por exemplo). Verificado no OJS 3.5.0.3 com o ORCID OAuth desligado.
+
+Os testes ficam no repositório e não fazem parte do pacote da release.
 
 ### Créditos e autoria
 
 - **Desenvolvido e mantido pela** [OJSBR](https://ojsbr.com) — plugin autoral.
 - Distribuído sob a **GNU GPL v3**, a mesma licença do OJS.
+
+### Uso de IA
+
+Foi usada IA generativa (Claude, da Anthropic) para escrever e rodar testes, melhorar o código e
+alinhá-lo aos padrões da PKP. Toda mudança é revisada e testada pela OJSBR, que responde pelas
+releases publicadas.
 
 ### Licença
 
