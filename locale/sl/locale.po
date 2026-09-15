@@ -20,5 +20,6 @@ msgstr "Obnovi ročno vnosno polje ORCID, kadar preverjanje pristnosti ORCID (OA
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Vnesite celoten ORCID iD v obliki https://orcid.org/0000-0002-1825-0097 (ali samo 16 števk)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Ta ORCID iD je že dodeljen drugemu sodelavcu te prijave ({$name})."

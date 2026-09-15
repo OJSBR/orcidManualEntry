@@ -20,5 +20,6 @@ msgstr "Възстановява полето ORCID за въвеждане, к�
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Въведете пълния ORCID iD във формат https://orcid.org/0000-0002-1825-0097 (или само 16-те цифри)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Този ORCID iD вече е присвоен на друг сътрудник в това предложение ({$name})."

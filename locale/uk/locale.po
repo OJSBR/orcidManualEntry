@@ -20,5 +20,6 @@ msgstr "Повертає поле ORCID для ручного введення, 
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Введіть повний ORCID iD у форматі https://orcid.org/0000-0002-1825-0097 (або лише 16 цифр)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Цей ORCID iD уже призначено іншому учаснику цього подання ({$name})."

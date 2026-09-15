@@ -20,5 +20,6 @@ msgstr "Obnovuje ručně zapisovatelné pole ORCID, pokud není nastaveno ověř
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Zadejte celé ORCID iD ve formátu https://orcid.org/0000-0002-1825-0097 (nebo jen 16 číslic)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Toto ORCID iD je již přiřazeno jinému přispěvateli tohoto příspěvku ({$name})."

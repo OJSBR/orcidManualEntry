@@ -20,5 +20,6 @@ msgstr "وقتی احراز هویت ORCID (OAuth) پیکربندی نشده ب�
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "شناسهٔ کامل ORCID را با قالب https://orcid.org/0000-0002-1825-0097 (یا فقط ۱۶ رقم) وارد کنید."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "این شناسهٔ ORCID پیش‌تر به همکار دیگری در این ارسال اختصاص یافته است ({$name})."

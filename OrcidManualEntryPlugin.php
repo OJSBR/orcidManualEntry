@@ -3,46 +3,49 @@
 /**
  * @file plugins/generic/orcidManualEntry/OrcidManualEntryPlugin.php
  *
+ * Copyright (c) 2026 OJSBR (https://ojsbr.com)
+ * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ *
  * @class OrcidManualEntryPlugin
  *
- * @brief Restaura o campo ORCID digitavel (manual) no formulario de
- *        autor/contribuidor, no cadastro publico de usuario e no perfil,
- *        como nas versoes anteriores do OJS.
+ * @brief Restores the typeable (manual) ORCID field in the author/contributor
+ *        form, on the public user registration page and in the user profile,
+ *        as in earlier OJS versions.
  *
- * A partir do OJS 3.4/3.5 o antigo plugin ORCID foi incorporado ao core e o
- * campo ORCID passou a ser somente-leitura: so pode ser preenchido via
- * autenticacao OAuth (FieldOrcid) e, quando o OAuth nao esta configurado, o
- * campo simplesmente nao aparece. Alem disso o backend bloqueia qualquer ORCID
- * informado manualmente em Repo::author()->validate() e o endpoint de edicao de
- * contribuidor remove o ORCID dos parametros antes de salvar.
+ * From OJS 3.4/3.5 the former ORCID plugin is part of the core and the ORCID
+ * field is read-only: it can only be filled through OAuth authentication
+ * (FieldOrcid) and, when OAuth is not configured, the field is not shown at all.
+ * The backend also rejects a manually entered ORCID in Repo::author()->validate(),
+ * and the contributor edit endpoint drops the ORCID from the parameters before
+ * saving.
  *
- * Este plugin atua APENAS quando o ORCID OAuth NAO esta configurado no contexto.
+ * This plugin acts ONLY when ORCID OAuth is NOT configured for the context, and
+ * only through hooks: no core template is replaced.
  *
- * a) Contribuidor da submissao (ContributorForm), neutralizando quatro barreiras:
- *   1) Form::config::before  -> adiciona um campo 'orcid' digitavel;
+ * a) Submission contributor (ContributorForm), clearing four barriers:
+ *   1) Form::config::before  -> adds a typeable 'orcid' field;
  *   2) TemplateManager::display
- *                            -> publica o componente Vue 'field-orcid-manual',
- *                               sem o qual o valor gravado nao volta para o
- *                               formulario de edicao (ver addFieldComponent());
- *   3) Author::validate      -> remove o erro "cannotUpdateAuthorOrcid" (mantendo
- *                               a validacao de formato/checksum do proprio core);
+ *                            -> publishes the 'field-orcid-manual' Vue component,
+ *                               without which the stored value never comes back
+ *                               to the edit form (see addFieldComponent());
+ *   3) Author::validate      -> removes the "cannotUpdateAuthorOrcid" error (keeping
+ *                               the core's own format/checksum validation) and
+ *                               refuses an iD already used in the publication;
  *   4) Author::add::before /
- *      Author::edit          -> injeta/normaliza o ORCID informado antes da
- *                               gravacao no banco (o endpoint de edicao o remove
- *                               dos parametros, entao reinjetamos aqui).
+ *      Author::edit          -> injects/normalizes the entered ORCID before it is
+ *                               stored (the edit endpoint drops it from the
+ *                               parameters, so it is put back here).
  *
- * b) Cadastro publico de usuario (RegistrationForm) e perfil do usuario
- *    (IdentityForm), onde o core esconde o campo e ignora o valor enviado
- *    quando o OAuth esta desligado:
- *   5) *form::display        -> liga o $orcidEnabled dos templates do core;
- *   6) TemplateResource::getFilename
- *                            -> troca form/orcidProfile.tpl (o widget de OAuth)
- *                               pela versao manual deste plugin;
- *   7) *form::Constructor    -> valida formato/checksum do que foi digitado;
- *   8) *form::execute        -> grava o ORCID normalizado no usuario.
+ * b) Public registration (RegistrationForm) and user profile (IdentityForm),
+ *    where the core hides the field and ignores the submitted value when OAuth
+ *    is off:
+ *   5) *form::display        -> adds the field to the rendered form with an
+ *                               output filter (neither template has a hook);
+ *   6) *form::Constructor    -> validates format/checksum of what was typed;
+ *   7) *form::execute        -> stores the normalized ORCID on the user.
  *
- * O ORCID gravado no usuario e copiado pelo proprio core para os metadados de
- * autoria da submissao (Repo::author()->newAuthorFromUser()).
+ * The ORCID stored on the user is copied by the core itself to the authorship
+ * metadata of a submission (Repo::author()->newAuthorFromUser()).
  */
 
 namespace APP\plugins\generic\orcidManualEntry;
@@ -64,35 +67,36 @@ use PKP\validation\ValidatorORCID;
 class OrcidManualEntryPlugin extends GenericPlugin
 {
     /**
-     * Nome do componente Vue registrado por js/orcidManualEntry.js. Precisa ser
-     * diferente de 'field-text' porque o componente estende o FieldText para
-     * tambem ler a prop 'orcid' (ver addFieldComponent()).
+     * Name of the Vue component registered by js/orcidManualEntry.js. It must
+     * differ from 'field-text' because the component extends FieldText to also
+     * read the 'orcid' prop (see addFieldComponent()).
      */
     public const FIELD_COMPONENT = 'field-orcid-manual';
 
     /**
-     * Templates que montam o ContributorsListPanel, ou seja, onde o campo pode
-     * ser exibido: o painel (todos os fluxos de trabalho passam por ele) e o
-     * assistente de submissao.
+     * Templates that mount the ContributorsListPanel, where the field can be
+     * shown: the dashboard (every workflow goes through it) and the submission
+     * wizard.
      */
     public const TEMPLATES_WITH_CONTRIBUTORS = [
         'dashboard/editors.tpl',
         'submission/wizard.tpl',
     ];
 
-    /**
-     * Template do core substituido pela versao manual (ver overrideOrcidTemplate()).
-     */
-    public const ORCID_WIDGET_TEMPLATE = 'form/orcidProfile.tpl';
+    /** Id of the form each user form template renders, used to place the field. */
+    public const USER_FORM_IDS = [
+        'registrationform' => 'register',
+        'identityform' => 'identityForm',
+    ];
 
     /**
-     * ORCID normalizado capturado em Author::validate para reaproveitar em
-     * Author::add::before / Author::edit dentro da MESMA requisicao.
-     * null = limpar o valor; string = URL normalizada.
+     * Normalized ORCID captured in Author::validate, reused by
+     * Author::add::before / Author::edit within the SAME request.
+     * null = clear the value; string = normalized URL.
      */
     private static ?string $pendingOrcid = null;
 
-    /** Indica se a requisicao atual trouxe a chave 'orcid' no payload. */
+    /** Whether the current request carried the 'orcid' key in its payload. */
     private static bool $hasPending = false;
 
     /**
@@ -107,17 +111,16 @@ class OrcidManualEntryPlugin extends GenericPlugin
         }
 
         if ($this->getEnabled($mainContextId)) {
-            // Contribuidor da submissao.
+            // Submission contributor.
             Hook::add('Form::config::before', [$this, 'addOrcidField']);
             Hook::add('TemplateManager::display', [$this, 'addFieldComponent']);
             Hook::add('Author::validate', [$this, 'allowManualOrcid']);
             Hook::add('Author::add::before', [$this, 'applyOrcidOnAdd']);
             Hook::add('Author::edit', [$this, 'applyOrcidOnEdit']);
 
-            // Cadastro publico e perfil do usuario.
-            Hook::add('TemplateResource::getFilename', [$this, 'overrideOrcidTemplate']);
-            Hook::add('registrationform::display', [$this, 'enableUserOrcidField']);
-            Hook::add('identityform::display', [$this, 'enableUserOrcidField']);
+            // Public registration and user profile.
+            Hook::add('registrationform::display', [$this, 'addUserOrcidField']);
+            Hook::add('identityform::display', [$this, 'addUserOrcidField']);
             Hook::add('registrationform::Constructor', [$this, 'addUserOrcidCheck']);
             Hook::add('identityform::Constructor', [$this, 'addUserOrcidCheck']);
             Hook::add('registrationform::execute', [$this, 'saveRegistrationOrcid']);
@@ -144,9 +147,9 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * O plugin so deve agir quando o ORCID OAuth NAO esta configurado.
-     * Quando o OAuth esta ativo, o core cuida do FieldOrcid e do fluxo de
-     * verificacao, e este plugin fica inerte.
+     * The plugin only acts while ORCID OAuth is NOT configured. With OAuth on,
+     * the core handles FieldOrcid and the verification flow, and this plugin
+     * stays inert.
      */
     private function orcidOAuthActive(): bool
     {
@@ -155,10 +158,10 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 1: adiciona um campo ORCID digitavel ao ContributorForm.
+     * Barrier 1: adds a typeable ORCID field to the ContributorForm.
      *
-     * Form::config::before e disparado via Hook::run, entao o form chega como
-     * segundo parametro do callback (nao dentro de um array).
+     * Form::config::before is fired through Hook::run, so the form arrives as
+     * the second parameter of the callback (not inside an array).
      */
     public function addOrcidField(string $hookName, $form): bool
     {
@@ -168,13 +171,13 @@ class OrcidManualEntryPlugin extends GenericPlugin
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
         }
-        // Evita duplicar caso o config seja montado mais de uma vez.
+        // Do not add it twice when the config is built more than once.
         if ($form->getField('orcid')) {
             return Hook::CONTINUE;
         }
 
         $form->addField(new FieldText('orcid', [
-            // FieldText que le tambem a prop 'orcid'; ver addFieldComponent().
+            // A FieldText that also reads the 'orcid' prop; see addFieldComponent().
             'component' => self::FIELD_COMPONENT,
             'label' => __('user.orcid'),
             'description' => __('plugins.generic.orcidManualEntry.field.description'),
@@ -185,24 +188,23 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 2: publica o componente Vue do campo.
+     * Barrier 2: publishes the Vue component of the field.
      *
-     * ContributorsListPanel.openEditModal() copia o contribuidor buscado na API
-     * para os campos do formulario, mas trata o campo chamado 'orcid' como caso
-     * especial: em vez de `field.value = contribuidor.orcid`, ele faz
-     * `field.orcid = contribuidor.orcid`, porque o core supoe que ali esteja o
-     * FieldOrcid (o widget de OAuth), que le essa prop. Um FieldText comum le
-     * `value`, entao o ORCID gravado nunca chegava ao input: o formulario
-     * reabria em branco e o "Salvar" seguinte regravava o branco por cima do
-     * ORCID armazenado.
+     * ContributorsListPanel.openEditModal() copies the contributor fetched from
+     * the API onto the form fields, but special-cases the field named 'orcid':
+     * instead of `field.value = contributor.orcid` it sets
+     * `field.orcid = contributor.orcid`, because the core assumes FieldOrcid (the
+     * OAuth widget) is there and reads that prop. A plain FieldText reads
+     * `value`, so the stored ORCID never reached the input: the form reopened
+     * blank and the next "Save" wrote the blank over the stored ORCID.
      *
-     * O componente registrado em js/orcidManualEntry.js estende o FieldText e
-     * inicializa `value` a partir da prop `orcid`, resolvendo os dois sintomas.
+     * The component registered in js/orcidManualEntry.js extends FieldText and
+     * seeds `value` from the `orcid` prop, which removes both symptoms.
      *
-     * O script precisa ser carregado depois do js/build.js (registrado pelo core
-     * com STYLE_SEQUENCE_LATE), para que 'field-text' ja exista no registro, e
-     * antes da chamada pkp.registry.init() no fim da pagina, que cria o app Vue.
-     * STYLE_SEQUENCE_LAST da exatamente essa janela.
+     * The script must load after js/build.js (registered by the core with
+     * STYLE_SEQUENCE_LATE), so that 'field-text' is already registered, and
+     * before pkp.registry.init() at the end of the page, which creates the Vue
+     * app. STYLE_SEQUENCE_LAST gives exactly that window.
      *
      * @param array $args [$templateMgr, &$template, &$output]
      */
@@ -234,14 +236,13 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 3: remove o bloqueio "cannotUpdateAuthorOrcid" que o core adiciona
-     * sempre que 'orcid' esta presente nos parametros, preservando a validacao de
-     * formato/checksum do proprio core. Tambem captura o valor normalizado para as
-     * etapas de gravacao.
+     * Barrier 3: removes the "cannotUpdateAuthorOrcid" block the core adds whenever
+     * 'orcid' is in the parameters, keeping the core's own format/checksum
+     * validation. It also captures the normalized value for the saving steps.
      *
-     * Author::validate e disparado via Hook::call, entao os argumentos chegam como
-     * array no segundo parametro; $args[0] e o array $errors (por referencia) e
-     * $args[2] e o array $props enviado.
+     * Author::validate is fired through Hook::call, so the arguments arrive as an
+     * array in the second parameter; $args[0] is the $errors array (by reference)
+     * and $args[2] the submitted $props.
      */
     public function allowManualOrcid(string $hookName, array $args): bool
     {
@@ -261,25 +262,25 @@ class OrcidManualEntryPlugin extends GenericPlugin
         self::$pendingOrcid = ($normalized === '') ? null : $normalized;
 
         if ($normalized === '') {
-            // Campo vazio: nao ha ORCID para gravar, remove qualquer erro de ORCID.
+            // Empty field: no ORCID to store, drop any ORCID error.
             unset($args[0]['orcid']);
         } elseif (self::isValidOrcid($normalized)) {
-            // Formato valido. Antes de liberar, recusa o iD que ja pertence a
-            // outro contribuidor da MESMA publicacao: o core nao checa isso, e
-            // dois autores com o mesmo ORCID passam batido ate o deposito no
-            // Crossref, onde viram o mesmo pesquisador.
-            $duplicado = $this->duplicateOrcidHolder($args[1] ?? null, $props, $normalized);
-            if ($duplicado !== null) {
-                $args[0]['orcid'] = [__('plugins.generic.orcidManualEntry.error.duplicateOrcid', ['name' => $duplicado])];
-                // Nada a gravar: as etapas de gravacao nao devem reinjetar o valor.
+            // Valid format. Before letting it through, refuse an iD that already
+            // belongs to another contributor of the SAME publication: the core
+            // does not check this, and two authors with the same ORCID go
+            // unnoticed until the Crossref deposit, where they become one person.
+            $holder = $this->duplicateOrcidHolder($args[1] ?? null, $props, $normalized);
+            if ($holder !== null) {
+                $args[0]['orcid'] = [__('plugins.generic.orcidManualEntry.error.duplicateOrcid', ['name' => $holder])];
+                // Nothing to store: the saving steps must not put the value back.
                 self::$hasPending = false;
                 self::$pendingOrcid = null;
                 return Hook::CONTINUE;
             }
-            // Remove o bloqueio do core e o erro de formato do valor cru.
+            // Drop the core block and the format error on the raw value.
             unset($args[0]['orcid']);
         } else {
-            // Valor invalido: mantem apenas a mensagem de ORCID invalido.
+            // Invalid value: keep only the invalid ORCID message.
             $args[0]['orcid'] = [__('user.orcid.orcidInvalid')];
         }
 
@@ -287,7 +288,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 4a: grava o ORCID ao ADICIONAR um contribuidor.
+     * Barrier 4a: stores the ORCID when a contributor is ADDED.
      */
     public function applyOrcidOnAdd(string $hookName, array $args): bool
     {
@@ -302,17 +303,16 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 4b: grava o ORCID ao EDITAR um contribuidor. O endpoint remove o
-     * ORCID dos parametros antes de salvar, entao reinjetamos no objeto que sera
-     * persistido (o hook roda antes do UPDATE no banco).
+     * Barrier 4b: stores the ORCID when a contributor is EDITED. The endpoint drops
+     * the ORCID from the parameters before saving, so it is put back on the object
+     * about to be persisted (the hook runs before the UPDATE).
      *
-     * Campo vazio significa "remover o ORCID", e assim deve continuar. Mas como
-     * essa e a operacao destrutiva do plugin -- e ja foi disparada sem querer,
-     * quando o formulario reabria em branco --, ela fica registrada no log de
-     * erros para que qualquer regressao futura do componente Vue seja
-     * rastreavel em vez de silenciosa.
+     * An empty field means "remove the ORCID", and must keep meaning that. Since
+     * this is the plugin's destructive operation -- and it once fired by accident,
+     * when the form reopened blank -- it is written to the error log, so that any
+     * future regression of the Vue component is traceable instead of silent.
      *
-     * $args[0] e o autor que sera gravado; $args[1] e o autor como esta hoje.
+     * $args[0] is the author about to be stored; $args[1] the author as it is now.
      */
     public function applyOrcidOnEdit(string $hookName, array $args): bool
     {
@@ -324,8 +324,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
 
         if (self::$pendingOrcid === null && !empty($currentOrcid)) {
             error_log(sprintf(
-                '[orcidManualEntry] Removendo o ORCID %s do contribuidor %d (campo enviado vazio).',
-                $currentOrcid,
+                '[orcidManualEntry] Removing the ORCID of contributor %d (the field was submitted empty).',
                 (int) $newAuthor->getId()
             ));
         }
@@ -337,90 +336,110 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     //
-    // Cadastro publico de usuario e perfil do usuario
+    // Public registration and user profile
     //
 
     /**
-     * Barreira 5: liga o campo ORCID nos templates do core.
+     * Barrier 5: adds the ORCID field to the registration and profile forms.
      *
-     * Tanto templates/user/identityForm.tpl quanto
-     * templates/frontend/pages/userRegister.tpl so mostram qualquer coisa de
-     * ORCID sob `{if $orcidEnabled}`, e as duas classes de formulario atribuem
-     * essa variavel como false quando OrcidManager::isEnabled() e false --
-     * exatamente a situacao em que este plugin trabalha. O hook `*form::display`
-     * roda em Form::fetch(), ou seja, DEPOIS que o formulario ja atribuiu suas
-     * variaveis, entao basta sobrescrever.
+     * Both core templates show ORCID only under `{if $orcidEnabled}`, which the
+     * forms set to false while OAuth is off, and what they include then is the
+     * OAuth widget. Neither template has a hook, so the field is added to the
+     * rendered form by an output filter: the core templates stay untouched and
+     * `$orcidEnabled` stays false, so the OAuth widget is never drawn.
      *
-     * As demais variaveis do widget de OAuth (orcidOAuthUrl, orcidIcon...) nao
-     * sao atribuidas de proposito: quem as usaria e o form/orcidProfile.tpl do
-     * core, substituido em overrideOrcidTemplate() pela versao manual.
-     *
-     * $args[0] e o formulario; $args[1] e a saida (por referencia), que nao
-     * tocamos -- devolver Hook::CONTINUE mantem o fluxo normal do fetch.
+     * The `*form::display` hook runs at the start of Form::fetch(), before the
+     * form is rendered. $args[0] is the form; returning Hook::CONTINUE keeps the
+     * normal fetch.
      */
-    public function enableUserOrcidField(string $hookName, array $args): bool
+    public function addUserOrcidField(string $hookName, array $args): bool
     {
         if ($this->orcidOAuthActive()) {
             return Hook::CONTINUE;
         }
 
         $form = $args[0];
-        $request = Application::get()->getRequest();
-        $templateMgr = PKPTemplateManager::getManager($request);
+        $formKey = strtolower((new \ReflectionClass($form))->getShortName());
+        if (!$form instanceof Form || !isset(self::USER_FORM_IDS[$formKey])) {
+            return Hook::CONTINUE;
+        }
 
-        $templateMgr->assign([
-            'orcidEnabled' => true,
-            'orcidManualEntry' => true,
-            'targetOp' => $form instanceof RegistrationForm ? 'register' : 'profile',
-            // O core so renderiza o botao "excluir ORCID" com orcidAuthenticated
-            // verdadeiro; no modo manual nada e autenticado, e apagar o ORCID e
-            // simplesmente limpar o campo.
-            'orcidAuthenticated' => false,
-            'orcidManualDescription' => __('plugins.generic.orcidManualEntry.field.description'),
-        ]);
+        $templateMgr = PKPTemplateManager::getManager(Application::get()->getRequest());
+        $templateMgr->registerFilter('output', function (string $output) use ($form, $formKey): string {
+            return self::insertUserOrcidField($output, self::USER_FORM_IDS[$formKey], self::renderUserOrcidField($form, $formKey === 'registrationform'));
+        });
 
         return Hook::CONTINUE;
     }
 
     /**
-     * Barreira 6: troca o widget de OAuth pela versao manual.
-     *
-     * form/orcidProfile.tpl e o unico ponto de ORCID do cadastro publico (o
-     * userRegister.tpl nao tem campo proprio: o core so inclui esse template) e
-     * e tambem o que, no perfil, esconde por JavaScript o input de texto que o
-     * identityForm.tpl acabou de desenhar. Substituindo esse unico arquivo os
-     * dois problemas somem de uma vez, sem sobrescrever nenhum template grande
-     * do core (e sem disputar com temas, que raramente tocam nele).
-     *
-     * $args[0] chega por referencia a partir de PKPTemplateResource::_getFilename().
+     * The markup of the field, in the style of the page it goes into: the reader
+     * pages for registration, the form builder style for the profile.
      */
-    public function overrideOrcidTemplate(string $hookName, array $args): bool
+    public static function renderUserOrcidField(Form $form, bool $frontend): string
     {
-        $filePath = &$args[0];
-        $template = $args[1];
+        $value = htmlspecialchars((string) $form->getData('orcid'), ENT_QUOTES, 'UTF-8');
+        $label = htmlspecialchars(__('user.orcid'), ENT_QUOTES, 'UTF-8');
+        $description = htmlspecialchars(__('plugins.generic.orcidManualEntry.field.description'), ENT_QUOTES, 'UTF-8');
+        $errors = $form->getErrorsArray();
+        $error = isset($errors['orcid']) ? '<span class="error">' . htmlspecialchars((string) $errors['orcid'], ENT_QUOTES, 'UTF-8') . '</span>' : '';
+        $input = '<input type="text" name="orcid" id="orcidManualEntry" value="' . $value . '" maxlength="46" autocomplete="off"'
+            . ' placeholder="https://orcid.org/0000-0002-1825-0097" aria-describedby="orcidManualEntryDescription"';
 
-        if ($template !== self::ORCID_WIDGET_TEMPLATE) {
-            return Hook::CONTINUE;
-        }
-        if ($this->orcidOAuthActive()) {
-            return Hook::CONTINUE;
-        }
-
-        $override = $this->getPluginPath() . '/templates/' . self::ORCID_WIDGET_TEMPLATE;
-        if (file_exists($override)) {
-            $filePath = $override;
+        if ($frontend) {
+            return '<fieldset class="orcid orcidManualEntry"><legend>' . $label . '</legend><div class="fields"><div class="orcid"><label>'
+                . '<span class="label">' . $label . '</span>' . $input . '></label>'
+                . '<div class="description" id="orcidManualEntryDescription">' . $description . '</div>' . $error
+                . '</div></div></fieldset>';
         }
 
-        return Hook::CONTINUE;
+        return '<div class="section orcidManualEntry">' . $error . '<div>' . $input . ' class="field text">'
+            . '<label class="sub_label" for="orcidManualEntry">' . $label . '</label></div>'
+            . '<label class="description" id="orcidManualEntryDescription">' . $description . '</label></div>';
     }
 
     /**
-     * Barreira 7: valida o que foi digitado.
+     * Put the field into the rendered form, once.
      *
-     * O hook `*form::Constructor` roda no fim de Form::__construct(), quando a
-     * lista de verificacoes ja existe e antes de qualquer validate(). Como o
-     * campo e opcional, um valor vazio passa direto; um valor preenchido tem de
-     * ser um ORCID valido em formato e digito verificador.
+     * Registration: right after the opening tag of form#register, where the core
+     * would have put its ORCID widget. Profile: after the last field of
+     * form#identityForm, before the privacy note that precedes the buttons.
+     * Output that is not that form, or already has an ORCID input, is returned
+     * unchanged, so the filter is harmless for anything else rendered in the
+     * same request.
+     */
+    public static function insertUserOrcidField(string $output, string $formId, string $field): string
+    {
+        $formStart = strpos($output, 'id="' . $formId . '"');
+        if ($formStart === false || preg_match('/<input\b[^>]*\bname="orcid"/', $output)) {
+            return $output;
+        }
+
+        if ($formId === 'register') {
+            $tagEnd = strpos($output, '>', $formStart);
+            return $tagEnd === false ? $output : substr_replace($output, $field, $tagEnd + 1, 0);
+        }
+
+        $required = strpos($output, 'class="formRequired"', $formStart);
+        if ($required === false) {
+            return $output;
+        }
+        $at = strrpos(substr($output, 0, $required), '<p>');
+        $avatar = strpos($output, 'preferredAvatarInitials', $formStart);
+        if ($avatar !== false && ($privacy = strpos($output, '<p>', $avatar)) !== false && $privacy < $at) {
+            $at = $privacy;
+        }
+
+        return $at === false ? $output : substr_replace($output, $field, $at, 0);
+    }
+
+    /**
+     * Barrier 6: validates what was typed.
+     *
+     * The `*form::Constructor` hook runs at the end of Form::__construct(), when the
+     * list of checks exists and before any validate(). The field is optional: an
+     * empty value passes, a filled one must be a valid ORCID in format and check
+     * digit.
      */
     public function addUserOrcidCheck(string $hookName, array $args): bool
     {
@@ -448,14 +467,13 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 8a: grava o ORCID no usuario recem-cadastrado.
+     * Barrier 7a: stores the ORCID on the newly registered user.
      *
-     * RegistrationForm::readInputData() ja le a variavel 'orcid' do POST, mas o
-     * execute() do core so a aplica quando OrcidManager::isEnabled(). O hook
-     * `registrationform::execute` roda dentro de Form::execute(), chamado pelo
-     * proprio RegistrationForm::execute() ANTES do Repo::user()->add(), e o
-     * usuario em construcao esta na propriedade publica $form->user justamente
-     * para este tipo de uso.
+     * RegistrationForm::readInputData() already reads 'orcid' from the POST, but
+     * the core execute() only applies it when OrcidManager::isEnabled(). The
+     * `registrationform::execute` hook runs inside Form::execute(), called by
+     * RegistrationForm::execute() BEFORE Repo::user()->add(), and the user being
+     * built is in the public $form->user property for exactly this kind of use.
      */
     public function saveRegistrationOrcid(string $hookName, array $args): bool
     {
@@ -480,13 +498,13 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Barreira 8b: grava o ORCID editado no perfil.
+     * Barrier 7b: stores the ORCID edited in the profile.
      *
-     * IdentityForm::execute() nunca aplica o ORCID: o unico tratamento que ele
-     * da ao campo e o "removeOrcidId", do fluxo de OAuth. O hook roda em
-     * Form::execute(), chamado por BaseProfileForm::execute() imediatamente
-     * antes do Repo::user()->edit($user) -- e sobre esse mesmo objeto de usuario
-     * ($request->getUser()) que gravamos.
+     * IdentityForm::execute() never applies the ORCID: the only handling it gives
+     * the field is "removeOrcidId", from the OAuth flow. The hook runs in
+     * Form::execute(), called by BaseProfileForm::execute() right before
+     * Repo::user()->edit($user) -- and it is that same user object
+     * ($request->getUser()) that is written here.
      */
     public function saveIdentityOrcid(string $hookName, array $args): bool
     {
@@ -498,7 +516,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
         if (!$form instanceof IdentityForm) {
             return Hook::CONTINUE;
         }
-        // Pedido de remocao do token de OAuth: e o proprio core quem trata.
+        // A request to remove the OAuth token is handled by the core.
         if ($form->getData('removeOrcidId') === 'true') {
             return Hook::CONTINUE;
         }
@@ -515,8 +533,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
 
         if ($orcid === null && !empty($user->getOrcid())) {
             error_log(sprintf(
-                '[orcidManualEntry] Removendo o ORCID %s do usuario %d (campo enviado vazio).',
-                $user->getOrcid(),
+                '[orcidManualEntry] Removing the ORCID of user %d (the field was submitted empty).',
                 (int) $user->getId()
             ));
         }
@@ -528,12 +545,12 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Le o ORCID enviado pelo formulario e o devolve normalizado.
+     * Reads the ORCID submitted by the form and returns it normalized.
      *
-     * @return string|null|false A URL canonica; null para limpar o valor;
-     *                           false quando a requisicao nao trouxe o campo --
-     *                           caso em que nada deve ser tocado, para que um
-     *                           POST sem o campo nunca apague um ORCID gravado.
+     * @return string|null|false The canonical URL; null to clear the value; false
+     *                           when the request did not carry the field -- then
+     *                           nothing is touched, so that a POST without the
+     *                           field never erases a stored ORCID.
      */
     private static function readSubmittedOrcid(Form $form)
     {
@@ -547,30 +564,21 @@ class OrcidManualEntryPlugin extends GenericPlugin
             return null;
         }
 
-        // A validacao ja barrou valores invalidos; esta guarda cobre o caso de
-        // um formulario que tenha executado sem passar por validate().
+        // Validation already refused invalid values; this guard covers a form
+        // executed without validate().
         return self::isValidOrcid($normalized) ? $normalized : false;
     }
 
     /**
-     * Normaliza a entrada para a URL canonica do ORCID exigida pelo core:
-     * https://orcid.org/0000-0002-1825-0097 (ou o dominio sandbox).
-     * Aceita o iD nu (16 digitos) ou a URL com/sem protocolo. Valores nao
-     * reconhecidos sao devolvidos como estao, para falharem na validacao.
+     * Name of the contributor of the same publication who already uses this
+     * ORCID, or null when there is none.
      *
-     * @param mixed $raw
-     */
-    /**
-     * Nome do contribuidor da mesma publicacao que ja usa este ORCID, ou null se
-     * nao houver nenhum.
+     * The contributor being edited is skipped, or re-saving an author without
+     * touching the ORCID would conflict with itself. When ADDING, $author is null
+     * and the publication comes from the submitted parameters.
      *
-     * O proprio contribuidor em edicao e ignorado, senao reeditar um autor sem
-     * mexer no ORCID acusaria conflito com ele mesmo. Ao ADICIONAR, $author
-     * chega nulo e a publicacao vem dos parametros enviados.
-     *
-     * A comparacao e feita pelo iD (os 16 digitos), nao pela URL: o mesmo
-     * pesquisador gravado uma vez como orcid.org e outra como sandbox.orcid.org
-     * continua sendo a mesma pessoa.
+     * The comparison is by iD (the 16 digits), not by URL: the same researcher
+     * stored once as orcid.org and once as sandbox.orcid.org is still one person.
      */
     private function duplicateOrcidHolder($author, array $props, string $normalized): ?string
     {
@@ -597,8 +605,8 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Os 16 digitos de um ORCID (0000-0002-1825-0097), venha ele como iD nu ou
-     * como URL de producao ou de sandbox. String vazia quando nao ha iD.
+     * The 16 digits of an ORCID (0000-0002-1825-0097), whether given as a bare iD
+     * or as a production or sandbox URL. Empty string when there is no iD.
      */
     public static function orcidId(string $value): string
     {
@@ -607,6 +615,14 @@ class OrcidManualEntryPlugin extends GenericPlugin
             : '';
     }
 
+    /**
+     * Normalizes the input to the canonical ORCID URL the core expects:
+     * https://orcid.org/0000-0002-1825-0097 (or the sandbox domain). Accepts the
+     * bare iD (16 digits) or the URL with or without protocol. Unrecognized values
+     * are returned as they are, so that they fail validation.
+     *
+     * @param mixed $raw
+     */
     public static function normalizeOrcid($raw): string
     {
         $v = trim((string) $raw);
@@ -614,12 +630,12 @@ class OrcidManualEntryPlugin extends GenericPlugin
             return '';
         }
 
-        // iD nu: 0000-0002-1825-0097
+        // Bare iD: 0000-0002-1825-0097
         if (preg_match('#^(\d{4}-\d{4}-\d{4}-\d{3}[0-9Xx])$#', $v, $m)) {
             return OrcidManager::ORCID_URL . strtoupper($m[1]);
         }
 
-        // URL (com ou sem protocolo/www), orcid.org ou sandbox.orcid.org
+        // URL (with or without protocol/www), orcid.org or sandbox.orcid.org
         if (preg_match('#^(?:https?://)?(?:www\.)?(sandbox\.)?orcid\.org/(\d{4}-\d{4}-\d{4}-\d{3}[0-9Xx])/?$#i', $v, $m)) {
             $host = $m[1] ? 'sandbox.orcid.org' : 'orcid.org';
             return 'https://' . $host . '/' . strtoupper($m[2]);
@@ -629,7 +645,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
-     * Valida o ORCID (formato + digito verificador ISNI) usando o validador do core.
+     * Validates the ORCID (format + ISNI check digit) with the core validator.
      */
     public static function isValidOrcid(string $orcidUrl): bool
     {

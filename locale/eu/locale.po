@@ -20,5 +20,6 @@ msgstr "Eskuz idazteko ORCID eremua leheneratzen du ORCID (OAuth) autentifikazio
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Sartu ORCID iD osoa, https://orcid.org/0000-0002-1825-0097 formatuan (edo 16 digituak soilik)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "ORCID iD hori bidalketa honetako beste kolaboratzaile bati esleituta dago jada ({$name})."

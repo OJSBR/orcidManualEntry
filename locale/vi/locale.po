@@ -20,5 +20,6 @@ msgstr "Khôi phục trường ORCID nhập tay khi chưa cấu hình xác thự
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Nhập ORCID iD đầy đủ, theo định dạng https://orcid.org/0000-0002-1825-0097 (hoặc chỉ 16 chữ số)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "ORCID iD này đã được gán cho một tác giả khác của bài nộp này ({$name})."

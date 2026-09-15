@@ -20,5 +20,6 @@ msgstr "Mengembalikan bidang ORCID yang dapat diketik ketika autentikasi ORCID (
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Masukkan ORCID iD lengkap, dalam format https://orcid.org/0000-0002-1825-0097 (atau cukup 16 digitnya)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "ORCID iD ini sudah digunakan oleh kontributor lain pada naskah ini ({$name})."

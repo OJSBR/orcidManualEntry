@@ -20,5 +20,6 @@ msgstr "Restaurează câmpul ORCID editabil atunci când autentificarea ORCID (O
 msgid "plugins.generic.orcidManualEntry.field.description"
 msgstr "Introduceți ORCID iD complet, în formatul https://orcid.org/0000-0002-1825-0097 (sau doar cele 16 cifre)."
 
+#, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Acest ORCID iD este deja atribuit altui contribuitor al acestei propuneri ({$name})."

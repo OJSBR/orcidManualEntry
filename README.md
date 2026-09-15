@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.1.0-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.1.2.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.1.0/orcidManualEntry-1.1.1.0.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.2.0/orcidManualEntry-1.1.2.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -19,14 +19,14 @@ the field: the **author/contributor form**, the **public user registration page*
 > enable ORCID OAuth; once you configure OAuth, the plugin goes inert and OJS takes over.
 > See [Why authenticated ORCID is recommended](#why-authenticated-orcid-is-recommended).
 
-> **Developed and maintained by [OJSBR](https://ojsbr.com.br).** See the
+> **Developed and maintained by [OJSBR](https://ojsbr.com).** See the
 > [Credits & authorship](#credits--authorship) section below.
 
 ## Compatibility & branches
 
 | OJS version | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.1.0 |
+| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.2.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -105,21 +105,19 @@ is off**:
    an existing iD is logged to the PHP error log, so that a future regression of the Vue
    component is traceable instead of silent.
 
-For the **registration page** and the **user profile**, the core already ships a text field
-and already reads the `orcid` request variable — it just hides the field and drops the value
-when OAuth is off. Four more hooks close that gap:
+For the **registration page** and the **user profile**, the core already reads the `orcid`
+request variable — it just hides the field and drops the value when OAuth is off. Three more
+hooks close that gap, **without replacing any core template**:
 
-5. `registrationform::display` / `identityform::display` → turn on the templates' own
-   `$orcidEnabled` switch, which is what gates the ORCID markup in `userRegister.tpl` and
-   `identityForm.tpl`.
-6. `TemplateResource::getFilename` → replaces `templates/form/orcidProfile.tpl` (the OAuth
-   widget) with the plugin's manual version. That single small template is the only ORCID
-   markup on the registration page, and on the profile it is what turns the text input into
-   a hidden field by JavaScript — swapping it fixes both screens without overriding any
-   large core template.
-7. `registrationform::Constructor` / `identityform::Constructor` → add an optional
+5. `registrationform::display` / `identityform::display` → register a Smarty output filter
+   that adds the field to the rendered form (neither template has a hook): at the top of
+   `form#register`, where the core would put its ORCID widget, and after the last field of
+   `form#identityForm`. The core's `$orcidEnabled` switch stays off, so the OAuth widget is
+   never drawn. The filter leaves any other output alone and never adds a second `orcid`
+   input.
+6. `registrationform::Constructor` / `identityform::Constructor` → add an optional
    `FormValidatorCustom` on `orcid`, so a typed iD must pass format + checksum.
-8. `registrationform::execute` / `identityform::execute` → write the normalized iD to the
+7. `registrationform::execute` / `identityform::execute` → write the normalized iD to the
    user (`RegistrationForm::execute()` only applies it when OAuth is on, and
    `IdentityForm::execute()` never applies it at all).
 
@@ -128,21 +126,36 @@ core, and a context-enabled plugin is not loaded on that page.
 
 ## Tests
 
-Verified on **OJS 3.5.0-3** (2026-08-29), with ORCID OAuth off:
+- **PHP suite** (`tests/`, 18 tests): the plugin class against the installed PKP, ORCID
+  normalization, duplicate comparison by iD, where the field goes in the registration and
+  profile forms, that other output is left alone, that the submitted value is escaped, that no
+  core template is replaced and no iD reaches the server log, and the 38 translations. Run
+  either way from the OJS root:
 
-| Check | Result |
-|-------|--------|
-| Public registration page shows a typeable ORCID field | ✅ |
-| Registration stores the iD, normalized to the canonical URL | ✅ `0000-0002-1825-0097` → `https://orcid.org/0000-0002-1825-0097` |
-| **Profile → Identity** shows the stored iD and saves a new one | ✅ |
-| Invalid iD (bad checksum) | ✅ rejected, stored value untouched |
-| New submission inherits the account's iD in the author metadata | ✅ |
-| Contributor edit modal reopens with the stored iD | ✅ |
-| ORCID OAuth enabled ⇒ plugin inert | ✅ the core's "Connect ORCID" button comes back and the manual field disappears |
+  ```bash
+  php plugins/generic/orcidManualEntry/tests/run.php
+  lib/pkp/lib/vendor/bin/phpunit --configuration lib/pkp/tests/phpunit.xml --no-coverage "$PWD/plugins/generic/orcidManualEntry/tests"
+  ```
+
+- **Cypress** (`cypress/tests/functional/OrcidManualEntry.cy.js`): the registration page, the
+  profile (a bare iD saved as its canonical URL, a wrong check digit refused, the iD cleared)
+  and contributors through the REST endpoints the contributor form uses (iD stored, the same
+  iD refused for a second contributor even as a sandbox URL, a wrong check digit refused, the
+  iD removed). Captcha on login must be off for the run.
+
+  ```bash
+  npx cypress run --config specPattern='plugins/generic/orcidManualEntry/cypress/tests/functional/*.cy.js' \
+    --env contextPath=<journal>,adminUser=<user>,adminPassword=<password>,submissionId=<id>,publicationId=<id>,authorUserGroupId=<id>
+  ```
+
+- Verified on OJS 3.5.0.3 with ORCID OAuth off, with screenshots of the registration page and of
+  the profile showing a refused iD. Earlier manual checks (1.1.x) also covered a new submission
+  inheriting the account's iD, the contributor modal reopening with the stored iD, and the
+  plugin going inert once OAuth is on.
 
 ## Credits & authorship
 
-- **Developed and maintained by** [OJSBR](https://ojsbr.com.br) — original plugin.
+- **Developed and maintained by** [OJSBR](https://ojsbr.com) — original plugin.
 - Distributed under the **GNU GPL v3**, the same license as OJS.
 
 ## Contributing
@@ -170,13 +183,13 @@ do usuário**.
 > temporária enquanto a revista não puder habilitar o ORCID OAuth; assim que o OAuth for
 > configurado, o plugin fica inerte e o OJS assume o controle.
 
-> **Desenvolvido e mantido pela [OJSBR](https://ojsbr.com.br).**
+> **Desenvolvido e mantido pela [OJSBR](https://ojsbr.com).**
 
 ### Compatibilidade e branches
 
 | Versão do OJS | Branch | Release do plugin |
 |---------------|--------|-------------------|
-| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.1.0 |
+| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.2.0 |
 
 Vale também para o OJS 3.4.x, onde a mesma restrição do núcleo foi introduzida.
 
@@ -236,21 +249,20 @@ nessa página.
 
 ### Testes
 
-Verificado no **OJS 3.5.0-3** (29/08/2026), com o ORCID OAuth desligado:
+Suíte PHP em `tests/` (18 testes, pelo `tests/run.php` ou pelo PHPUnit do PKP) e Cypress em
+`cypress/tests/functional/`, com os comandos da seção em inglês. O Cypress confere a tela de
+cadastro, o perfil (iD digitado só com os 16 dígitos gravado como URL canônica, dígito
+verificador errado recusado, iD apagado) e os contribuidores pelos mesmos endpoints REST do
+formulário (iD gravado, o mesmo iD recusado para um segundo contribuidor mesmo como URL de
+sandbox, dígito errado recusado, iD removido).
 
-| Verificação | Resultado |
-|-------------|-----------|
-| Tela pública de cadastro exibe o campo ORCID digitável | ✅ |
-| O cadastro grava o iD, normalizado para a URL canônica | ✅ `0000-0002-1825-0097` → `https://orcid.org/0000-0002-1825-0097` |
-| **Perfil → Identificação** exibe o iD gravado e salva um novo | ✅ |
-| iD inválido (dígito verificador errado) | ✅ recusado, valor gravado intacto |
-| Submissão nova herda o iD da conta nos metadados de autoria | ✅ |
-| Modal de editar contribuidor reabre com o iD gravado | ✅ |
-| ORCID OAuth ligado ⇒ plugin inerte | ✅ volta o botão "Conectar ORCID" do núcleo e o campo manual some |
+Desde a 1.1.2.0 o campo do cadastro e do perfil entra por um filtro de saída do Smarty, sem
+substituir nenhum template do núcleo. Verificado no OJS 3.5.0.3 com o ORCID OAuth desligado,
+com capturas da tela de cadastro e do perfil recusando um iD inválido.
 
 ### Créditos e autoria
 
-- **Desenvolvido e mantido pela** [OJSBR](https://ojsbr.com.br) — plugin autoral.
+- **Desenvolvido e mantido pela** [OJSBR](https://ojsbr.com) — plugin autoral.
 - Distribuído sob a **GNU GPL v3**, a mesma licença do OJS.
 
 ### Licença

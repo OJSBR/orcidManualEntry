@@ -1,7 +1,7 @@
 /**
  * @file plugins/generic/orcidManualEntry/js/orcidManualEntry.js
  *
- * Copyright (c) 2026 OJSBR (https://ojsbr.com.br)
+ * Copyright (c) 2026 OJSBR (https://ojsbr.com)
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @brief Registers the `field-orcid-manual` form field, a plain text input that
