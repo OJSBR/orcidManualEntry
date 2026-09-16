@@ -19,3 +19,36 @@ msgstr "Enter the full ORCID iD, in the format https://orcid.org/0000-0002-1825-
 
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "This ORCID iD is already assigned to another contributor of this submission ({$name})."
+
+msgid "plugins.generic.orcidManualEntry.settings.intro"
+msgstr "These settings apply only while ORCID (OAuth) authentication is not configured for this journal."
+
+msgid "plugins.generic.orcidManualEntry.settings.area.where"
+msgstr "Where the field is shown"
+
+msgid "plugins.generic.orcidManualEntry.settings.showOnRegistration"
+msgstr "Show the ORCID field on the public registration page"
+
+msgid "plugins.generic.orcidManualEntry.settings.area.required"
+msgstr "Where the iD is required"
+
+msgid "plugins.generic.orcidManualEntry.settings.area.required.description"
+msgstr "An ORCID iD that is required is asked for with the same validation as an optional one: the format and the check digit still have to be right."
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnRegistration"
+msgstr "Require it to register a new account"
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnContributor"
+msgstr "Require it to save an author or co-author"
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnSubmit"
+msgstr "Require it from every contributor to complete a submission"
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnRegistration"
+msgstr "The ORCID iD is required to register."
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnContributor"
+msgstr "The ORCID iD is required for every author and co-author."
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
+msgstr "The submission cannot be completed while an ORCID iD is missing: {$names}."

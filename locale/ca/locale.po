@@ -19,3 +19,36 @@ msgstr "Introduïu l'ORCID iD complet, en el format https://orcid.org/0000-0002-
 
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Aquest ORCID iD ja està assignat a un altre col·laborador d'aquesta tramesa ({$name})."
+
+msgid "plugins.generic.orcidManualEntry.settings.intro"
+msgstr "Aquestes opcions només s'apliquen mentre l'autenticació ORCID (OAuth) no estigui configurada en aquesta revista."
+
+msgid "plugins.generic.orcidManualEntry.settings.area.where"
+msgstr "On es mostra el camp"
+
+msgid "plugins.generic.orcidManualEntry.settings.showOnRegistration"
+msgstr "Mostra el camp ORCID a la pàgina pública de registre"
+
+msgid "plugins.generic.orcidManualEntry.settings.area.required"
+msgstr "On l'iD és obligatori"
+
+msgid "plugins.generic.orcidManualEntry.settings.area.required.description"
+msgstr "L'iD ORCID obligatori es demana amb la mateixa validació que l'opcional: el format i el dígit de control se segueixen comprovant."
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnRegistration"
+msgstr "Exigeix-lo per registrar un compte nou"
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnContributor"
+msgstr "Exigeix-lo per desar un autor o coautor"
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnSubmit"
+msgstr "Exigeix-lo a tots els autors per completar la tramesa"
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnRegistration"
+msgstr "L'iD ORCID és obligatori per registrar-se."
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnContributor"
+msgstr "L'iD ORCID és obligatori per a cada autor i coautor."
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
+msgstr "La tramesa no es pot completar mentre falti l'iD ORCID de: {$names}."

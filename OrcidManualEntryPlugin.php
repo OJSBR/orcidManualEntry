@@ -52,10 +52,14 @@ namespace APP\plugins\generic\orcidManualEntry;
 
 use APP\core\Application;
 use APP\facades\Repo;
+use APP\notification\NotificationManager;
 use PKP\components\forms\FieldText;
 use PKP\components\forms\publication\ContributorForm;
+use PKP\core\JSONMessage;
 use PKP\form\Form;
 use PKP\form\validation\FormValidatorCustom;
+use PKP\linkAction\LinkAction;
+use PKP\linkAction\request\AjaxModal;
 use PKP\orcid\OrcidManager;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
@@ -72,6 +76,18 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * read the 'orcid' prop (see addFieldComponent()).
      */
     public const FIELD_COMPONENT = 'field-orcid-manual';
+
+    /**
+     * The journal settings and what they do when nothing was saved yet: the
+     * field is offered everywhere, as in earlier versions of this plugin, and
+     * nothing is required until a journal asks for it.
+     */
+    public const DEFAULTS = [
+        'showOnRegistration' => true,
+        'requireOnRegistration' => false,
+        'requireOnContributor' => false,
+        'requireOnSubmit' => false,
+    ];
 
     /**
      * Templates that mount the ContributorsListPanel, where the field can be
@@ -121,6 +137,10 @@ class OrcidManualEntryPlugin extends GenericPlugin
         Hook::add('Author::add::before', $this->applyOrcidOnAdd(...));
         Hook::add('Author::edit', $this->applyOrcidOnEdit(...));
 
+        // Completing the submission, where the journal may require every
+        // contributor to have an iD.
+        Hook::add('Submission::validateSubmit', $this->validateSubmit(...));
+
         // Public registration and user profile.
         Hook::add('registrationform::display', $this->addUserOrcidField(...));
         Hook::add('identityform::display', $this->addUserOrcidField(...));
@@ -146,6 +166,135 @@ class OrcidManualEntryPlugin extends GenericPlugin
     public function getDescription(): string
     {
         return __('plugins.generic.orcidManualEntry.description');
+    }
+
+    /**
+     * Which of the two user forms this is, or null for anything else. Matched by
+     * type and not by class name, so that a form extended by a theme or by
+     * another plugin is still recognized.
+     */
+    private static function userFormKey(object $form): ?string
+    {
+        if ($form instanceof RegistrationForm) {
+            return 'registrationform';
+        }
+
+        return $form instanceof IdentityForm ? 'identityform' : null;
+    }
+
+    /**
+     * A journal setting, with its default while it was never saved.
+     */
+    public function getFlag(?int $contextId, string $name): bool
+    {
+        if (!array_key_exists($name, self::DEFAULTS)) {
+            return false;
+        }
+        $value = $contextId === null ? null : $this->getSetting($contextId, $name);
+
+        return $value === null || $value === '' ? self::DEFAULTS[$name] : (bool) $value;
+    }
+
+    /**
+     * The same, for the journal of the request being answered.
+     */
+    public function currentFlag(string $name): bool
+    {
+        $context = Application::get()->getRequest()->getContext();
+
+        return $this->getFlag($context?->getId(), $name);
+    }
+
+    /**
+     * @copydoc Plugin::getActions()
+     */
+    public function getActions($request, $actionArgs)
+    {
+        $router = $request->getRouter();
+
+        return array_merge(
+            $this->getEnabled() ? [
+                new LinkAction(
+                    'settings',
+                    new AjaxModal(
+                        $router->url($request, null, null, 'manage', null, ['verb' => 'settings', 'plugin' => $this->getName(), 'category' => 'generic']),
+                        $this->getDisplayName()
+                    ),
+                    __('manager.plugins.settings'),
+                    null
+                ),
+            ] : [],
+            parent::getActions($request, $actionArgs)
+        );
+    }
+
+    /**
+     * @copydoc Plugin::manage()
+     */
+    public function manage($args, $request)
+    {
+        if ($request->getUserVar('verb') !== 'settings') {
+            return parent::manage($args, $request);
+        }
+
+        $context = $request->getContext();
+        if (!$context) {
+            return new JSONMessage(false);
+        }
+
+        $form = new OrcidManualEntrySettingsForm($this, $context);
+        if (!$request->getUserVar('save')) {
+            $form->initData();
+            return new JSONMessage(true, $form->fetch($request));
+        }
+
+        $form->readInputData();
+        if (!$form->validate()) {
+            return new JSONMessage(true, $form->fetch($request));
+        }
+        $form->execute();
+
+        $notificationManager = new NotificationManager();
+        $notificationManager->createTrivialNotification($request->getUser()->getId());
+
+        return new JSONMessage(true);
+    }
+
+    /**
+     * Hook Submission::validateSubmit — a submission cannot be completed while a
+     * contributor has no iD, when the journal asks for it.
+     *
+     * @param array $args [&$errors, $submission, $context]
+     */
+    public function validateSubmit(string $hookName, array $args): bool
+    {
+        if ($this->orcidOAuthActive() || !$this->currentFlag('requireOnSubmit')) {
+            return Hook::CONTINUE;
+        }
+
+        $errors = &$args[0];
+        $submission = $args[1] ?? null;
+        $publication = $submission?->getCurrentPublication();
+        if (!$publication) {
+            return Hook::CONTINUE;
+        }
+
+        $missing = [];
+        foreach (Repo::author()->getCollector()->filterByPublicationIds([$publication->getId()])->getMany() as $author) {
+            if (self::normalizeOrcid($author->getData('orcid')) === '') {
+                $missing[] = $author->getFullName(false) ?: __('common.none');
+            }
+        }
+
+        if ($missing) {
+            // The same key the core uses for its own contributor errors, so the
+            // message shows inside the contributors panel of the review step
+            // instead of only raising the wizard's generic warning.
+            $errors['contributors'] ??= [];
+            $errors['contributors'][] = __('plugins.generic.orcidManualEntry.error.requiredOnSubmit', ['names' => implode(', ', $missing)]);
+        }
+
+        return Hook::CONTINUE;
     }
 
     /**
@@ -252,10 +401,16 @@ class OrcidManualEntryPlugin extends GenericPlugin
             return Hook::CONTINUE;
         }
 
+        $required = $this->currentFlag('requireOnContributor');
         $props = $args[2] ?? [];
         if (!array_key_exists('orcid', $props)) {
             self::$hasPending = false;
             self::$pendingOrcid = null;
+            // Nothing was sent: with the iD required, a contributor kept without
+            // one is refused, whatever asked for the save.
+            if ($required && self::normalizeOrcid($args[1]?->getData('orcid') ?? '') === '') {
+                $args[0]['orcid'] = [__('plugins.generic.orcidManualEntry.error.requiredOnContributor')];
+            }
             return Hook::CONTINUE;
         }
 
@@ -264,6 +419,11 @@ class OrcidManualEntryPlugin extends GenericPlugin
         self::$pendingOrcid = ($normalized === '') ? null : $normalized;
 
         if ($normalized === '') {
+            if ($required) {
+                $args[0]['orcid'] = [__('plugins.generic.orcidManualEntry.error.requiredOnContributor')];
+                self::$hasPending = false;
+                return Hook::CONTINUE;
+            }
             // Empty field: no ORCID to store, drop any ORCID error.
             unset($args[0]['orcid']);
         } elseif (self::isValidOrcid($normalized)) {
@@ -361,8 +521,13 @@ class OrcidManualEntryPlugin extends GenericPlugin
         }
 
         $form = $args[0];
-        $formKey = strtolower((new \ReflectionClass($form))->getShortName());
-        if (!$form instanceof Form || !isset(self::USER_FORM_IDS[$formKey])) {
+        $formKey = $form instanceof Form ? self::userFormKey($form) : null;
+        if ($formKey === null) {
+            return Hook::CONTINUE;
+        }
+        // A journal may keep the field out of the public registration page; the
+        // profile always has it, or the person could never record their own iD.
+        if ($formKey === 'registrationform' && !$this->currentFlag('showOnRegistration')) {
             return Hook::CONTINUE;
         }
 
@@ -454,6 +619,22 @@ class OrcidManualEntryPlugin extends GenericPlugin
         $form = $args[0];
         if (!$form instanceof Form) {
             return Hook::CONTINUE;
+        }
+
+        $registering = self::userFormKey($form) === 'registrationform';
+        if ($registering && !$this->currentFlag('showOnRegistration')) {
+            // The field is not on the page: nothing to validate, and requiring it
+            // would make registration impossible.
+            return Hook::CONTINUE;
+        }
+        if ($registering && $this->currentFlag('requireOnRegistration')) {
+            $form->addCheck(new FormValidatorCustom(
+                $form,
+                'orcid',
+                FormValidatorCustom::FORM_VALIDATOR_REQUIRED_VALUE,
+                'plugins.generic.orcidManualEntry.error.requiredOnRegistration',
+                fn ($orcid) => self::normalizeOrcid($orcid) !== ''
+            ));
         }
 
         $form->addCheck(new FormValidatorCustom(

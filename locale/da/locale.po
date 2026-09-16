@@ -23,3 +23,47 @@ msgstr "Indtast det fulde ORCID iD i formatet https://orcid.org/0000-0002-1825-0
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Dette ORCID iD er allerede tildelt en anden bidragyder til dette manuskript ({$name})."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.intro"
+msgstr "These settings apply only while ORCID (OAuth) authentication is not configured for this journal."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.area.where"
+msgstr "Where the field is shown"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.showOnRegistration"
+msgstr "Show the ORCID field on the public registration page"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.area.required"
+msgstr "Where the iD is required"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.area.required.description"
+msgstr "An ORCID iD that is required is asked for with the same validation as an optional one: the format and the check digit still have to be right."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.requireOnRegistration"
+msgstr "Require it to register a new account"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.requireOnContributor"
+msgstr "Require it to save an author or co-author"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.requireOnSubmit"
+msgstr "Require it from every contributor to complete a submission"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.error.requiredOnRegistration"
+msgstr "The ORCID iD is required to register."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.error.requiredOnContributor"
+msgstr "The ORCID iD is required for every author and co-author."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
+msgstr "The submission cannot be completed while an ORCID iD is missing: {$names}."

@@ -34,6 +34,7 @@ class LocaleFilesTest extends PKPTestCase
     /** Placeholders each key must keep, exactly once. */
     public const PLACEHOLDERS = [
         'plugins.generic.orcidManualEntry.error.duplicateOrcid' => ['{$name}'],
+        'plugins.generic.orcidManualEntry.error.requiredOnSubmit' => ['{$names}'],
     ];
 
     protected function localeDir(): string
@@ -70,7 +71,7 @@ class LocaleFilesTest extends PKPTestCase
     {
         $files = $this->files();
         $master = array_keys($files[self::MASTER]->entries);
-        $this->assertCount(4, $master);
+        $this->assertCount(15, $master);
 
         foreach ($files as $locale => $file) {
             $this->assertSame($master, array_keys($file->entries), "Keys of {$locale} differ from " . self::MASTER . '.');
@@ -88,7 +89,9 @@ class LocaleFilesTest extends PKPTestCase
         $keys = array_keys($this->files()[self::MASTER]->entries);
 
         foreach (array_unique($m[0]) as $key) {
-            if (str_ends_with($key, '.')) {
+            // Class paths of the plugin (component handlers, hooks) share the prefix
+            // and are not locale keys.
+            if (str_ends_with($key, '.') || preg_match('/\.(classes|controllers|pages|jobs|tests)\./', $key)) {
                 continue;
             }
             $this->assertTrue(in_array($key, $keys, true) || $this->isKeyPrefix($key, $keys), "{$key} is used but not translated.");

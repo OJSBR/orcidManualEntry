@@ -106,7 +106,14 @@ class OrcidManualEntryTest extends PKPTestCase
     {
         $source = (string) file_get_contents(dirname(__DIR__) . '/OrcidManualEntryPlugin.php');
         $this->assertStringNotContainsString("Hook::add('TemplateResource::getFilename'", $source);
-        $this->assertFalse(is_dir(dirname(__DIR__) . '/templates'), 'The plugin ships no copy of a core template.');
+        // The plugin may ship templates of its own (its settings form), never a
+        // copy of one of the core's.
+        $core = glob(dirname(__DIR__, 4) . '/lib/pkp/templates/*') ?: [];
+        $coreNames = array_map('basename', $core);
+        foreach (glob(dirname(__DIR__) . '/templates/*') ?: [] as $template) {
+            $this->assertNotContains(basename($template), $coreNames, basename($template) . ' is a copy of a core template.');
+            $this->assertStringStartsWith('settings', basename($template), 'Only the settings form is templated here.');
+        }
 
         foreach (explode("\n", $source) as $number => $line) {
             if (str_contains($line, 'error_log(')) {

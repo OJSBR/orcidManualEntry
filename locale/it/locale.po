@@ -19,3 +19,36 @@ msgstr "Inserisci l'iD ORCID completo, nel formato https://orcid.org/0000-0002-1
 
 msgid "plugins.generic.orcidManualEntry.error.duplicateOrcid"
 msgstr "Questo ORCID iD è già assegnato a un altro collaboratore di questa proposta ({$name})."
+
+msgid "plugins.generic.orcidManualEntry.settings.intro"
+msgstr "Queste impostazioni valgono solo finché l'autenticazione ORCID (OAuth) non è configurata per questa rivista."
+
+msgid "plugins.generic.orcidManualEntry.settings.area.where"
+msgstr "Dove il campo viene mostrato"
+
+msgid "plugins.generic.orcidManualEntry.settings.showOnRegistration"
+msgstr "Mostrare il campo ORCID nella pagina pubblica di registrazione"
+
+msgid "plugins.generic.orcidManualEntry.settings.area.required"
+msgstr "Dove l'iD è obbligatorio"
+
+msgid "plugins.generic.orcidManualEntry.settings.area.required.description"
+msgstr "Un iD ORCID obbligatorio è richiesto con la stessa validazione di uno facoltativo: formato e cifra di controllo restano verificati."
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnRegistration"
+msgstr "Richiederlo per registrare un nuovo account"
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnContributor"
+msgstr "Richiederlo per salvare un autore o un coautore"
+
+msgid "plugins.generic.orcidManualEntry.settings.requireOnSubmit"
+msgstr "Richiederlo a tutti i contributori per completare la proposta"
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnRegistration"
+msgstr "L'iD ORCID è obbligatorio per registrarsi."
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnContributor"
+msgstr "L'iD ORCID è obbligatorio per ogni autore e coautore."
+
+msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
+msgstr "La proposta non può essere completata finché manca l'iD ORCID di: {$names}."

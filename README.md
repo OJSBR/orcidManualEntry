@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.3.0-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.1.4.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.3.0/orcidManualEntry-1.1.3.0.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.4.0/orcidManualEntry-1.1.4.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -26,7 +26,7 @@ the field: the **author/contributor form**, the **public user registration page*
 
 | Application | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.3.0 |
+| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.4.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -66,6 +66,9 @@ need to record iDs. It is a pragmatic fallback, not a replacement for authentica
   `sandbox.orcid.org` is still caught.
 - Shows the stored iD again when *Edit contributor* is reopened, so re-saving a contributor
   never wipes it.
+- Lets the journal decide **where the iD is required** — when someone registers, when a
+  contributor is saved, and when a submission is completed. Nothing is required until a
+  journal asks for it.
 
 ## Installation
 
@@ -75,8 +78,18 @@ need to record iDs. It is a pragmatic fallback, not a replacement for authentica
 
 ## Configuration
 
-There is nothing to configure — enabling the plugin is the whole setup. What matters is the
-**guard**: the plugin only acts while ORCID OAuth is **off** for the context.
+**Settings → Website → Plugins → ORCID manual (digitável) → Settings.** Four boxes, and the
+defaults keep the plugin behaving exactly as it did before 1.1.4.0:
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Show the ORCID field on the public registration page | on | Takes the field off that page without touching the profile, which always has it — otherwise nobody could ever record their own iD. |
+| Require it when a new user registers | off | An account is not created without a valid iD. |
+| Require it when an author or co-author is saved | off | A contributor is not saved without one, in the wizard and in *Edit contributor*. |
+| Require it from every author to complete the submission | off | The submission cannot be completed while any contributor has no iD; the message names them, in the contributors panel of the last step. |
+
+What also matters is the **guard**: the plugin only acts while ORCID OAuth is **off** for the
+context — with OAuth on, these settings do nothing and the core owns the field.
 
 `OrcidManager::isEnabled()` reads `orcidEnabled` from the journal (or the site), and it does
 **not** check whether the credentials are usable. A journal left with ORCID enabled and
@@ -124,6 +137,16 @@ hooks close that gap, **without replacing any core template**:
    user (`RegistrationForm::execute()` only applies it when OAuth is on, and
    `IdentityForm::execute()` never applies it at all).
 
+Requiring the iD adds one more hook, and reuses the ones above:
+
+8. `Submission::validateSubmit` → the core's own validation of the last step of the wizard,
+   which is what the *Submit* button calls. The message is added under the **`contributors`**
+   key, the same one the core uses for its contributor errors, so it is shown in the
+   contributors panel of the review step instead of only raising the generic warning. On the
+   registration page and in *Edit contributor*, requiring it is one more check on the
+   validators of 3 and 6 — including the save that carries no `orcid` key at all, which is how
+   the contributor endpoint saves.
+
 Site-wide registration (no journal context) is out of scope: ORCID is disabled there by the
 core, and a context-enabled plugin is not loaded on that page.
 
@@ -140,17 +163,28 @@ core, and a context-enabled plugin is not loaded on that page.
   lib/pkp/lib/vendor/bin/phpunit --configuration lib/pkp/tests/phpunit.xml --no-coverage "$PWD/plugins/generic/orcidManualEntry/tests"
   ```
 
+  Since 1.1.4.0 the suite also runs against the **database** of the installation: a submission
+  is created with a contributor who has no iD, the core's own validation of the last step is
+  called, and the message has to name that contributor — and has to disappear once the journal
+  stops asking for the iD. The submission it creates is deleted, and the test skips itself
+  where the installation looks like a live site.
+
 - **Cypress** (`cypress/tests/functional/OrcidManualEntry.cy.js`, run by
   [pkp-github-actions](https://github.com/pkp/pkp-github-actions) on every push): enables the
-  plugin, checks the registration page, the profile (a bare iD saved as its canonical URL, a wrong
-  check digit refused, the iD cleared and the original put back) and contributors of a submission
-  in progress through the REST endpoints the contributor form uses (iD stored, the same iD refused
-  for a second contributor even as a sandbox URL, a wrong check digit refused, the iD removed),
-  deleting the contributors it adds.
-- Verified on OJS 3.5.0.3 with ORCID OAuth off, also with the WhatsApp Contributor plugin adding
-  its own field to the registration form. Earlier manual checks (1.1.x) also covered a new
-  submission inheriting the account's iD, the contributor modal reopening with the stored iD, and
-  the plugin going inert once OAuth is on.
+  plugin, reads and saves its settings form, checks the registration page, the profile (a bare iD
+  saved as its canonical URL, a wrong check digit refused, the iD cleared and the original put
+  back) and contributors of a submission through the REST endpoints the contributor form uses (iD
+  stored, the same iD refused for a second contributor even as a sandbox URL, a wrong check digit
+  refused, the iD removed). With the iD required it then checks that a complete registration
+  missing only the iD creates no account, that a contributor without one is refused, and that the
+  submission is turned down by the very request the *Submit* button makes — and goes through once
+  the journal stops asking. It works on an installation with no submission of its own: it creates
+  one and deletes it, puts the settings back as it found them, and never touches a captcha.
+- Both suites are run by `.github/actions/tests.sh`, so a failure in either one fails the job.
+- Verified on OJS 3.5.0.3 and OMP 3.5.0.3 with ORCID OAuth off (34 unit tests and 10 browser tests
+  on each), also with the WhatsApp Contributor plugin adding its own field to the registration
+  form. Earlier manual checks (1.1.x) also covered a new submission inheriting the account's iD,
+  the contributor modal reopening with the stored iD, and the plugin going inert once OAuth is on.
 
 Tests are kept in the repository and are not part of the release package.
 
@@ -161,8 +195,8 @@ Tests are kept in the repository and are not part of the release package.
 
 ## AI use
 
-Generative AI (Claude, by Anthropic) was used to write and run tests, improve the code and bring
-it in line with PKP standards. Every change is reviewed and tested by OJSBR, which is responsible
+Generative AI (Claude Opus 5, by Anthropic) was used to write and run tests, improve the code and
+bring it in line with PKP standards. Every change is reviewed and tested by OJSBR, which is responsible
 for the published releases.
 
 ## Contributing
@@ -196,7 +230,7 @@ do usuário**.
 
 | Aplicação | Branch | Release do plugin |
 |-----------|--------|-------------------|
-| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.3.0 |
+| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.4.0 |
 
 > A partir da 1.1.3.0 o mesmo pacote serve OJS e OMP. O antigo `orcidManualEntryOmp` está
 > arquivado; as releases dele continuam lá.
@@ -236,6 +270,8 @@ alternativa pragmática, não um substituto da autenticação.
   mesmo iD gravado uma vez como `orcid.org` e outra como `sandbox.orcid.org` também é pego.
 - Reexibe o iD gravado ao reabrir *Editar contribuidor*, de modo que salvar o contribuidor
   de novo nunca apaga o ORCID.
+- Deixa a revista decidir **onde o iD é obrigatório** — no cadastro de novo usuário, ao salvar
+  um autor ou coautor e para concluir a submissão. Nada é exigido enquanto a revista não pedir.
 
 ### Instalação
 
@@ -245,8 +281,19 @@ em `plugins/generic/` (ficando `plugins/generic/orcidManualEntry/`). Depois ativ
 
 ### Configuração
 
-Não há o que configurar — ativar o plugin é a configuração inteira. O que importa é a
-**guarda**: o plugin só age enquanto o ORCID OAuth estiver **desligado** no contexto.
+**Configurações → Website → Plugins → ORCID manual (digitável) → Configurações.** São quatro
+caixas, e o padrão mantém o plugin exatamente como era antes da 1.1.4.0:
+
+| Opção | Padrão | O que faz |
+| --- | --- | --- |
+| Exibir o campo ORCID na página pública de cadastro | ligada | Tira o campo daquela página sem mexer no perfil, que sempre o tem — senão ninguém conseguiria registrar o próprio iD. |
+| Exigir no cadastro de novo usuário | desligada | A conta não é criada sem um iD válido. |
+| Exigir no cadastro de autor ou coautor | desligada | O contribuidor não é salvo sem iD, no assistente e em *Editar contribuidor*. |
+| Exigir de todos os autores para concluir a submissão | desligada | A submissão não pode ser concluída enquanto faltar o iD de algum contribuidor; a mensagem diz de quem, no painel de contribuidores da última etapa. |
+
+O que também importa é a **guarda**: o plugin só age enquanto o ORCID OAuth estiver
+**desligado** no contexto — com o OAuth ligado essas opções não fazem nada e quem manda no
+campo é o núcleo.
 
 O `OrcidManager::isEnabled()` lê o `orcidEnabled` da revista (ou do site) e **não** verifica
 se as credenciais prestam. Uma revista com o ORCID ligado e client id/secret de teste fica no
@@ -267,10 +314,18 @@ devolvido) e os contribuidores de uma submissão em andamento pelos mesmos endpo
 formulário (iD gravado, o mesmo iD recusado para um segundo contribuidor mesmo como URL de sandbox,
 dígito errado recusado, iD removido), apagando os contribuidores que cria.
 
+A obrigatoriedade entra pelo `Submission::validateSubmit`, a validação da última etapa do próprio
+núcleo — a mesma que o botão *Enviar* chama —, e a mensagem vai na chave `contributors`, a que o
+núcleo usa para os erros de autoria, para aparecer no painel de contribuidores e não só como aviso
+genérico. Desde a 1.1.4.0 a suíte também roda contra o **banco** da instalação (uma submissão com
+contribuidor sem iD, criada e apagada pelo teste) e, no navegador, prova que um cadastro completo
+sem o iD não cria conta e que a submissão é recusada pela própria requisição do botão *Enviar*.
+
 Desde a 1.1.2.0 o campo do cadastro e do perfil entra por um filtro de saída do Smarty, sem
 substituir nenhum template do núcleo; a partir da 1.1.3.0 o filtro tem nome próprio, porque o Smarty
 chama todo filtro closure de "closure" e um apagava o de outro plugin (o campo do WhatsApp
-Contributor, por exemplo). Verificado no OJS 3.5.0.3 com o ORCID OAuth desligado.
+Contributor, por exemplo). Verificado no OJS 3.5.0.3 e no OMP 3.5.0.3 com o ORCID OAuth desligado:
+34 testes de unidade e 10 de navegador em cada.
 
 Os testes ficam no repositório e não fazem parte do pacote da release.
 
@@ -281,8 +336,8 @@ Os testes ficam no repositório e não fazem parte do pacote da release.
 
 ### Uso de IA
 
-Foi usada IA generativa (Claude, da Anthropic) para escrever e rodar testes, melhorar o código e
-alinhá-lo aos padrões da PKP. Toda mudança é revisada e testada pela OJSBR, que responde pelas
+Foi usada IA generativa (Claude Opus 5, da Anthropic) para escrever e rodar testes, melhorar o
+código e alinhá-lo aos padrões da PKP. Toda mudança é revisada e testada pela OJSBR, que responde pelas
 releases publicadas.
 
 ### Licença

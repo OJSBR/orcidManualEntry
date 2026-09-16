@@ -26,6 +26,7 @@ class PluginTest extends PKPTestCase
     {
         return [
             \APP\plugins\generic\orcidManualEntry\OrcidManualEntryPlugin::class,
+            \APP\plugins\generic\orcidManualEntry\OrcidManualEntrySettingsForm::class,
         ];
     }
 
@@ -33,6 +34,29 @@ class PluginTest extends PKPTestCase
     {
         foreach ($this->classes() as $class) {
             $this->assertTrue(class_exists($class), "{$class} does not load.");
+        }
+    }
+
+    public function testEveryImportedClassExistsInThisInstallation(): void
+    {
+        $files = array_merge(
+            glob(dirname(__DIR__) . '/*.php') ?: [],
+            glob(dirname(__DIR__) . '/classes/*.php') ?: []
+        );
+        $this->assertNotEmpty($files, 'no source file was found to read');
+
+        foreach ($files as $file) {
+            $source = (string) file_get_contents($file);
+            preg_match_all('/^use\s+([A-Za-z0-9_\\\\]+);/m', $source, $matches);
+            foreach ($matches[1] as $imported) {
+                // A name that does not resolve is a fatal error the moment the
+                // code path runs, and nothing but running it would show it:
+                // php -l and class_exists() on the plugin itself both pass.
+                $this->assertTrue(
+                    class_exists($imported) || interface_exists($imported) || trait_exists($imported) || function_exists($imported),
+                    sprintf('%s imports %s, which does not exist here.', basename($file), $imported)
+                );
+            }
         }
     }
 
