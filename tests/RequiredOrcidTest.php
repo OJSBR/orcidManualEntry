@@ -184,10 +184,13 @@ class RequiredOrcidTest extends PKPTestCase
         // The rule is hung on the core's own validation of the last step, so the
         // wizard shows it where it shows its own errors.
         $this->assertStringContainsString("Hook::add('Submission::validateSubmit'", $source);
-        $this->assertStringContainsString("!\$this->currentFlag('requireOnSubmit')", $source);
+        // The rule is read from the context the hook hands over, not from the
+        // journal of whatever request happens to be running.
+        $this->assertStringContainsString("\$context = \$args[2] ??", $source);
+        $this->assertStringContainsString("!\$this->getFlag(\$context?->getId(), 'requireOnSubmit')", $source);
         // Nothing is checked while ORCID OAuth is configured: the core owns the
         // field then.
-        $this->assertStringContainsString('$this->orcidOAuthActive() || !$this->currentFlag(', $source);
+        $this->assertStringContainsString('OrcidManager::isEnabled($context) || !$this->getFlag(', $source);
 
         // Without a publication there is nothing to check and nothing to break.
         $errors = [];

@@ -268,7 +268,11 @@ class OrcidManualEntryPlugin extends GenericPlugin
      */
     public function validateSubmit(string $hookName, array $args): bool
     {
-        if ($this->orcidOAuthActive() || !$this->currentFlag('requireOnSubmit')) {
+        // The hook hands over the context of the submission being completed,
+        // which is what the rule has to be read from: a submission can also be
+        // completed outside a request of its own journal.
+        $context = $args[2] ?? Application::get()->getRequest()->getContext();
+        if (OrcidManager::isEnabled($context) || !$this->getFlag($context?->getId(), 'requireOnSubmit')) {
             return Hook::CONTINUE;
         }
 
