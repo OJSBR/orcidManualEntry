@@ -89,6 +89,9 @@ defaults keep the plugin behaving exactly as it did before 1.1.4.0:
 | Require it from every author to complete the submission | off | The submission cannot be completed while any contributor has no iD; the message names them, in the contributors panel of the last step. |
 | Journal managers and section editors are exempt | **on** | Those two roles save a contributor and complete a submission with the iD still missing. Public registration is not covered: whoever registers holds no role in the journal yet. Being exempt never makes an invalid iD acceptable — it only lifts the requirement to have one. |
 
+> **Upgrading from 1.1.4.0:** the exemption arrives **on**. A journal that had already made
+> the iD required and wants everybody held to it — editors included — has to untick that box.
+
 What also matters is the **guard**: the plugin only acts while ORCID OAuth is **off** for the
 context — with OAuth on, these settings do nothing and the core owns the field.
 
@@ -296,6 +299,9 @@ caixas, e o padrão mantém o plugin exatamente como era antes da 1.1.4.0:
 | Exigir no cadastro de autor ou coautor | desligada | O contribuidor não é salvo sem iD, no assistente e em *Editar contribuidor*. |
 | Exigir de todos os autores para concluir a submissão | desligada | A submissão não pode ser concluída enquanto faltar o iD de algum contribuidor; a mensagem diz de quem, no painel de contribuidores da última etapa. |
 | Gestores da revista e editores de seção ficam isentos | **ligada** | Esses dois papéis gravam um autor e concluem a submissão com o iD ainda faltando. O cadastro público não entra: quem se cadastra ainda não tem papel na revista. Estar isento nunca torna um iD inválido aceitável — apenas dispensa de ter um. |
+
+> **Quem vem da 1.1.4.0:** a isenção chega **ligada**. A revista que já exigia o iD e quer
+> todo mundo preso à regra — editores inclusive — precisa desmarcar essa caixa.
 
 O que também importa é a **guarda**: o plugin só age enquanto o ORCID OAuth estiver
 **desligado** no contexto — com o OAuth ligado essas opções não fazem nada e quem manda no
