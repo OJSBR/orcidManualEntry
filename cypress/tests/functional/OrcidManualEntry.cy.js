@@ -250,6 +250,24 @@ describe('ORCID Manual Entry plugin', function() {
 	};
 
 	// The publication of that submission, where its contributors live.
+	// A submission of its own, still in the wizard: only then does the page carry
+	// the contributor form. Deleted in after().
+	const extra = [];
+	const newSubmission = () => cy.window({log: false}).then((win) => {
+		const locale = win.pkp.context.primaryLocale;
+		const create = (body) => send(pageUrl('api/v1/submissions'), 'POST', body);
+
+		// A journal needs the section; a press takes the submission without one.
+		return create({locale}).then((answer) => answer.status === 200
+			? answer
+			: api(pageUrl('api/v1/sections?count=1')).then((sections) => create({locale, sectionId: sections.items[0].id})))
+			.then((answer) => {
+				expect(answer.status, JSON.stringify(answer.body)).to.eq(200);
+				extra.push(answer.body.id);
+				return cy.wrap({id: answer.body.id, publicationId: answer.body.currentPublicationId, locale}, {log: false});
+			});
+	});
+
 	const workPublication = (submission) => pageUrl('api/v1/submissions/' + submission.id + '/publications/' + submission.publicationId);
 
 	it('Enables the plugin and offers a settings form for the journal', function() {
@@ -383,7 +401,7 @@ describe('ORCID Manual Entry plugin', function() {
 		login(adminUser, adminPassword);
 
 		// In the contributor form, the application's own mark on its own label.
-		workSubmission().then((submission) => {
+		newSubmission().then((submission) => {
 			request(pageUrl('submission') + '?id=' + submission.id).then((response) => {
 				const config = response.body.replace(/&quot;/g, '"');
 				const start = config.indexOf('"name":"orcid"');
@@ -575,12 +593,13 @@ describe('ORCID Manual Entry plugin', function() {
 	});
 
 	after(function() {
-		if (created.length || settingsWere || (work && work.created)) {
+		if (created.length || settingsWere || extra.length || (work && work.created)) {
 			login(adminUser, adminPassword);
 			created.forEach(({base, id}) => withToken('DELETE').then((options) => api(base + '/contributors/' + id, options)));
 			if (work && work.created) {
-				withToken('DELETE').then((options) => api(pageUrl('api/v1/submissions/' + work.id), options));
+				extra.push(work.id);
 			}
+			extra.forEach((id) => withToken('DELETE').then((options) => api(pageUrl('api/v1/submissions/' + id), options)));
 			if (settingsWere) {
 				cy.then(() => saveSettings(settingsWere));
 			}
