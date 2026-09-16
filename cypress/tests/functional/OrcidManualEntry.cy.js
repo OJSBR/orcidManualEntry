@@ -29,6 +29,8 @@ describe('ORCID Manual Entry plugin', function() {
 	const VALID = '0000-0002-1825-0097';
 	const VALID_URL = 'https://orcid.org/' + VALID;
 	const WRONG_CHECK_DIGIT = '0000-0002-1825-0098';
+	const ROLE_ID_MANAGER = 16;
+	const ROLE_ID_SUB_EDITOR = 17;
 
 	const identityOrcid = 'form[id="identityForm"] input[name="orcid"]';
 	let original = null;
@@ -151,9 +153,16 @@ describe('ORCID Manual Entry plugin', function() {
 		{log: false, timeout: 30000}
 	)));
 
+	// Another plugin of the journal may require the affiliation and the biography
+	// of every contributor: this spec is about the iD, so it carries them.
+	const OTHER_METADATA = (submission) => ({
+		affiliations: [{name: {[submission.locale]: 'Universidade Federal do Cypress'}}],
+		biography: {[submission.locale]: '<p>Pesquisadora do Cypress.</p>'},
+	});
+
 	// ---- the settings of the plugin: where the iD is asked for, and where it is required ----
 
-	const SETTINGS = ['showOnRegistration', 'requireOnRegistration', 'requireOnContributor', 'requireOnSubmit'];
+	const SETTINGS = ['showOnRegistration', 'requireOnRegistration', 'requireOnContributor', 'requireOnSubmit', 'editorsExempt'];
 	const settingsForm = 'form[id="orcidManualEntrySettingsForm"]';
 	// The URL the settings form posts to, read from the form itself, and the
 	// values the journal had before this run.
@@ -319,14 +328,14 @@ describe('ORCID Manual Entry plugin', function() {
 			const base = workPublication(submission);
 			api(base).then((publication) => authorGroupId(publication, submission).then((userGroupId) => {
 				// Names in the language of the submission, which the schema requires.
-				const contributor = (givenName, orcid) => ({
+				const contributor = (givenName, orcid) => Object.assign({
 					givenName: {[submission.locale]: givenName},
 					familyName: {[submission.locale]: 'Cypress'},
 					email: givenName.toLowerCase() + '.' + Date.now() + '@example.invalid',
 					userGroupId,
 					includeInBrowse: true,
 					orcid,
-				});
+				}, OTHER_METADATA(submission));
 				const keep = (answer) => {
 					if (answer.body && answer.body.id) {
 						created.push({base, id: answer.body.id});
@@ -359,9 +368,37 @@ describe('ORCID Manual Entry plugin', function() {
 
 	it('Requires the iD wherever the journal asks for it', function() {
 		login(adminUser, adminPassword);
-		cy.then(() => saveSettings({showOnRegistration: true, requireOnRegistration: true, requireOnContributor: true, requireOnSubmit: true}));
+		// Every box ticked, the exemption included: what the journal saved is what it gets back.
+		cy.then(() => saveSettings({showOnRegistration: true, requireOnRegistration: true, requireOnContributor: true, requireOnSubmit: true, editorsExempt: true}));
 		fetchSettings().then((html) => {
 			expect(checkedIn(html), 'the journal keeps every box it ticked').to.deep.eq(SETTINGS);
+		});
+
+		// The rules that follow are checked on whoever is running this: the
+		// exemption is put aside so that they are about the rule itself.
+		cy.then(() => saveSettings({showOnRegistration: true, requireOnRegistration: true, requireOnContributor: true, requireOnSubmit: true}));
+	});
+
+	it('Marks the field as required where the journal requires it', function() {
+		login(adminUser, adminPassword);
+
+		// In the contributor form, the application's own mark on its own label.
+		workSubmission().then((submission) => {
+			request(pageUrl('submission') + '?id=' + submission.id).then((response) => {
+				const config = response.body.replace(/&quot;/g, '"');
+				const start = config.indexOf('"name":"orcid"');
+				expect(start, 'the contributor form carries the iD field').to.be.greaterThan(-1);
+				const next = config.indexOf('"name":"', start + 1);
+				expect(/"isRequired":true/.test(config.slice(start, next === -1 ? undefined : next)), 'the iD is marked as required').to.eq(true);
+			});
+		});
+
+		// And on the registration page, the mark that page uses.
+		cy.clearCookies();
+		request(pageUrl('user/register')).then((response) => {
+			const field = response.body.slice(response.body.indexOf('orcidManualEntry'));
+			expect(field).to.contain('<span class="required" aria-hidden="true">*</span>');
+			expect(field).to.contain('required aria-required="true"');
 		});
 	});
 
@@ -415,13 +452,13 @@ describe('ORCID Manual Entry plugin', function() {
 		workSubmission().then((submission) => {
 			const base = workPublication(submission);
 			api(base).then((publication) => authorGroupId(publication, submission).then((userGroupId) => {
-				const contributor = {
+				const contributor = Object.assign({
 					givenName: {[submission.locale]: 'Dora'},
 					familyName: {[submission.locale]: 'Cypress'},
 					email: 'dora.' + Date.now() + '@example.invalid',
 					userGroupId,
 					includeInBrowse: true,
-				};
+				}, OTHER_METADATA(submission));
 
 				send(base + '/contributors', 'POST', contributor).then((refused) => {
 					expect(refused.status, JSON.stringify(refused.body)).to.eq(400);
@@ -437,6 +474,53 @@ describe('ORCID Manual Entry plugin', function() {
 					}
 				});
 			}));
+		});
+	});
+
+	it('Leaves the autonomy the journal chose to leave', function() {
+		login(adminUser, adminPassword);
+		cy.then(() => saveSettings({showOnRegistration: true, requireOnContributor: true, editorsExempt: true}));
+
+		cy.window().then((win) => {
+			const roles = win.pkp.currentUser.roles || [];
+			const runsTheJournal = roles.includes(ROLE_ID_MANAGER) || roles.includes(ROLE_ID_SUB_EDITOR);
+
+			workSubmission().then((submission) => {
+				const base = workPublication(submission);
+				api(base).then((publication) => authorGroupId(publication, submission).then((userGroupId) => {
+					const contributor = () => Object.assign({
+						givenName: {[submission.locale]: 'Elena'},
+						familyName: {[submission.locale]: 'Cypress'},
+						email: 'elena.' + Date.now() + '.' + Math.floor(Math.random() * 100000) + '@example.invalid',
+						userGroupId,
+						includeInBrowse: true,
+					}, OTHER_METADATA(submission));
+
+					// Whatever is created here is removed in after().
+					const keepIt = (answer) => {
+						if (answer.body && answer.body.id) {
+							created.push({base, id: answer.body.id});
+						}
+						return answer;
+					};
+
+					send(base + '/contributors', 'POST', contributor()).then(keepIt).then((answer) => {
+						if (runsTheJournal) {
+							expect(answer.status, 'whoever runs the journal saves it anyway: ' + JSON.stringify(answer.body)).to.eq(200);
+						} else {
+							expect(answer.status, 'the exemption is not for this account: ' + JSON.stringify(answer.body)).to.eq(400);
+							expect(answer.body).to.have.property('orcid');
+						}
+					});
+
+					// With the autonomy taken away, the same account is held to the rule.
+					cy.then(() => saveSettings({showOnRegistration: true, requireOnContributor: true}));
+					send(base + '/contributors', 'POST', contributor()).then(keepIt).then((answer) => {
+						expect(answer.status, JSON.stringify(answer.body)).to.eq(400);
+						expect(answer.body).to.have.property('orcid');
+					});
+				}));
+			});
 		});
 	});
 
@@ -463,10 +547,17 @@ describe('ORCID Manual Entry plugin', function() {
 					});
 				}
 
+				// Every plugin writes under the same key of the core, so what
+				// another one has to say about the same submission is left aside
+				// here: living beside it is the point, not the subject.
+				const heldForTheOrcid = (answer) => JSON.stringify(
+					((answer.body && answer.body.contributors) || []).filter((message) => String(message).toUpperCase().includes('ORCID'))
+				);
+
 				// What the wizard asks the server when the author presses Submit.
 				send(submitUrl, 'PUT', {_validateOnly: true}).then((answer) => {
 					expect(answer.status, JSON.stringify(answer.body)).to.eq(400);
-					const held = JSON.stringify(answer.body.contributors || []);
+					const held = heldForTheOrcid(answer);
 					// The core's own key: the message shows in the contributors
 					// panel of the review step, with its own errors.
 					expect(held, 'nothing was held against the contributors').to.not.eq('[]');
@@ -477,8 +568,7 @@ describe('ORCID Manual Entry plugin', function() {
 				// And with the journal no longer asking for it, nothing is held.
 				cy.then(() => saveSettings({showOnRegistration: true}));
 				send(submitUrl, 'PUT', {_validateOnly: true}).then((answer) => {
-					const held = JSON.stringify((answer.body && answer.body.contributors) || []);
-					expect(held, 'the rule only applies where the journal asked for it').to.not.contain(name);
+					expect(heldForTheOrcid(answer), 'the rule only applies where the journal asked for it').to.eq('[]');
 				});
 			});
 		});

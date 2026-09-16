@@ -35,6 +35,9 @@
 			{fbvElement type="checkbox" id="requireOnContributor" name="requireOnContributor" checked=$requireOnContributor label="plugins.generic.orcidManualEntry.settings.requireOnContributor"}
 			{fbvElement type="checkbox" id="requireOnSubmit" name="requireOnSubmit" checked=$requireOnSubmit label="plugins.generic.orcidManualEntry.settings.requireOnSubmit"}
 		{/fbvFormSection}
+		{fbvFormSection list=true description="plugins.generic.orcidManualEntry.settings.editorsExempt.description"}
+			{fbvElement type="checkbox" id="editorsExempt" name="editorsExempt" checked=$editorsExempt label="plugins.generic.orcidManualEntry.settings.editorsExempt"}
+		{/fbvFormSection}
 	{/fbvFormArea}
 
 	{fbvFormButtons submitText="common.save"}

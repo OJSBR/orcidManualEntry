@@ -52,3 +52,9 @@ msgstr "L'iD ORCID és obligatori per a cada autor i coautor."
 
 msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
 msgstr "La tramesa no es pot completar mentre falti l'iD ORCID de: {$names}."
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt"
+msgstr "Els gestors de la revista i els editors de secció queden exempts"
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt.description"
+msgstr "Poden desar un autor i completar una tramesa amb l'iD encara absent. El registre públic no hi entra: qui es registra encara no té cap rol a la revista."

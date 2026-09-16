@@ -22,6 +22,7 @@ use APP\publication\Publication;
 use APP\submission\Submission;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PKP\form\Form;
+use PKP\security\Role;
 use PKP\tests\PKPTestCase;
 
 #[CoversClass(OrcidManualEntryPlugin::class)]
@@ -64,6 +65,12 @@ class RequiredOrcidTest extends PKPTestCase
             {
                 return $this->getFlag(null, $name);
             }
+
+            /** There is no logged-in user on the command line: the answer is given here. */
+            public function currentlyExempt(): bool
+            {
+                return (bool) ($this->settings['exempt'] ?? false);
+            }
         };
     }
 
@@ -100,6 +107,8 @@ class RequiredOrcidTest extends PKPTestCase
         $this->assertFalse($defaults['requireOnRegistration']);
         $this->assertFalse($defaults['requireOnContributor']);
         $this->assertFalse($defaults['requireOnSubmit']);
+        // And whoever runs the journal keeps their autonomy unless it is taken away.
+        $this->assertTrue($defaults['editorsExempt']);
 
         $plugin = $this->plugin(['requireOnSubmit' => true]);
         $this->assertTrue($plugin->currentFlag('requireOnSubmit'));
@@ -190,7 +199,12 @@ class RequiredOrcidTest extends PKPTestCase
         $this->assertStringContainsString("!\$this->getFlag(\$context?->getId(), 'requireOnSubmit')", $source);
         // Nothing is checked while ORCID OAuth is configured: the core owns the
         // field then.
-        $this->assertStringContainsString('OrcidManager::isEnabled($context) || !$this->getFlag(', $source);
+        $this->assertStringContainsString('OrcidManager::isEnabled($context)', $source);
+        $this->assertMatchesRegularExpression(
+            '/OrcidManager::isEnabled\(\$context\)\s*\n?\s*\|\|\s*!\$this->getFlag\(/',
+            $source,
+            'the guard has to be read before anything else is'
+        );
 
         // Without a publication there is nothing to check and nothing to break.
         $errors = [];
@@ -198,6 +212,39 @@ class RequiredOrcidTest extends PKPTestCase
         $submission->current = null;
         $this->plugin(['requireOnSubmit' => true])->validateSubmit('Submission::validateSubmit', [&$errors, $submission, null]);
         $this->assertSame([], $errors);
+    }
+
+    public function testWhoeverRunsTheJournalCanBeLeftOutOfIt(): void
+    {
+        // Only the roles that decide about the submission.
+        $this->assertSame(
+            [Role::ROLE_ID_MANAGER, Role::ROLE_ID_SUB_EDITOR],
+            OrcidManualEntryPlugin::EXEMPT_ROLES
+        );
+        $this->assertNotContains(Role::ROLE_ID_ASSISTANT, OrcidManualEntryPlugin::EXEMPT_ROLES);
+
+        // An editor saves a contributor with no iD where a journal requires one.
+        $errors = [];
+        $this->plugin(['requireOnContributor' => true, 'exempt' => true])->allowManualOrcid('Author::validate', [&$errors, null, ['orcid' => '']]);
+        $this->assertSame([], $errors);
+
+        // Anybody else is still held to it.
+        $errors = [];
+        $this->plugin(['requireOnContributor' => true, 'exempt' => false])->allowManualOrcid('Author::validate', [&$errors, null, ['orcid' => '']]);
+        $this->assertArrayHasKey('orcid', $errors);
+
+        // Being exempt is not a licence for a wrong iD: what is not an iD is
+        // still refused for what it is.
+        $errors = [];
+        $this->plugin(['requireOnContributor' => true, 'exempt' => true])->allowManualOrcid('Author::validate', [&$errors, null, ['orcid' => '0000-0000-0000-0000']]);
+        $this->assertArrayHasKey('orcid', $errors);
+
+        // And the gate at the end of the submission honours the same exemption.
+        $source = (string) file_get_contents(dirname(__DIR__) . '/OrcidManualEntryPlugin.php');
+        $this->assertStringContainsString('$this->isExempt($context?->getId())', $source);
+        $this->assertStringContainsString("!\$this->currentlyExempt()", $source);
+        // Registration is out of it: whoever registers holds no role yet.
+        $this->assertStringNotContainsString('registering && $this->currentlyExempt', $source);
     }
 
     public function testTheErrorNamesEveryContributorWhoHasNoId(): void

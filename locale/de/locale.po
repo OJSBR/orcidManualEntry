@@ -52,3 +52,9 @@ msgstr "Die ORCID iD ist für jede Autorin und jeden Mitautor erforderlich."
 
 msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
 msgstr "Die Einreichung kann nicht abgeschlossen werden, solange die ORCID iD fehlt von: {$names}."
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt"
+msgstr "Zeitschriftenverwalter/innen und Rubrikredakteur/innen sind ausgenommen"
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt.description"
+msgstr "Sie können eine beitragende Person speichern und eine Einreichung abschließen, während die iD noch fehlt. Die öffentliche Registrierung ist nicht erfasst: wer sich registriert, hat noch keine Rolle in der Zeitschrift."

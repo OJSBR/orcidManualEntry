@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.4.0-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.1.5.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.4.0/orcidManualEntry-1.1.4.0.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.5.0/orcidManualEntry-1.1.5.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -26,7 +26,7 @@ the field: the **author/contributor form**, the **public user registration page*
 
 | Application | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.4.0 |
+| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.5.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -87,6 +87,7 @@ defaults keep the plugin behaving exactly as it did before 1.1.4.0:
 | Require it when a new user registers | off | An account is not created without a valid iD. |
 | Require it when an author or co-author is saved | off | A contributor is not saved without one, in the wizard and in *Edit contributor*. |
 | Require it from every author to complete the submission | off | The submission cannot be completed while any contributor has no iD; the message names them, in the contributors panel of the last step. |
+| Journal managers and section editors are exempt | **on** | Those two roles save a contributor and complete a submission with the iD still missing. Public registration is not covered: whoever registers holds no role in the journal yet. Being exempt never makes an invalid iD acceptable — it only lifts the requirement to have one. |
 
 What also matters is the **guard**: the plugin only acts while ORCID OAuth is **off** for the
 context — with OAuth on, these settings do nothing and the core owns the field.
@@ -139,7 +140,11 @@ hooks close that gap, **without replacing any core template**:
 
 Requiring the iD adds one more hook, and reuses the ones above:
 
-8. `Submission::validateSubmit` → the core's own validation of the last step of the wizard,
+8. Where the journal requires the iD, the field carries the same required mark as
+   every other required field: `isRequired` in the contributor form, and the mark of
+   the registration page in the field this plugin renders there. Whoever is exempt
+   does not see a mark they are not held to.
+9. `Submission::validateSubmit` → the core's own validation of the last step of the wizard,
    which is what the *Submit* button calls. The message is added under the **`contributors`**
    key, the same one the core uses for its contributor errors, so it is shown in the
    contributors panel of the review step instead of only raising the generic warning. On the
@@ -181,7 +186,7 @@ core, and a context-enabled plugin is not loaded on that page.
   the journal stops asking. It works on an installation with no submission of its own: it creates
   one and deletes it, puts the settings back as it found them, and never touches a captcha.
 - Both suites are run by `.github/actions/tests.sh`, so a failure in either one fails the job.
-- Verified on OJS 3.5.0.3 and OMP 3.5.0.3 with ORCID OAuth off (34 unit tests and 10 browser tests
+- Verified on OJS 3.5.0.3 and OMP 3.5.0.3 with ORCID OAuth off (37 unit tests and 12 browser tests
   on each), also with the WhatsApp Contributor plugin adding its own field to the registration
   form. Earlier manual checks (1.1.x) also covered a new submission inheriting the account's iD,
   the contributor modal reopening with the stored iD, and the plugin going inert once OAuth is on.
@@ -230,7 +235,7 @@ do usuário**.
 
 | Aplicação | Branch | Release do plugin |
 |-----------|--------|-------------------|
-| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.4.0 |
+| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.5.0 |
 
 > A partir da 1.1.3.0 o mesmo pacote serve OJS e OMP. O antigo `orcidManualEntryOmp` está
 > arquivado; as releases dele continuam lá.
@@ -290,6 +295,7 @@ caixas, e o padrão mantém o plugin exatamente como era antes da 1.1.4.0:
 | Exigir no cadastro de novo usuário | desligada | A conta não é criada sem um iD válido. |
 | Exigir no cadastro de autor ou coautor | desligada | O contribuidor não é salvo sem iD, no assistente e em *Editar contribuidor*. |
 | Exigir de todos os autores para concluir a submissão | desligada | A submissão não pode ser concluída enquanto faltar o iD de algum contribuidor; a mensagem diz de quem, no painel de contribuidores da última etapa. |
+| Gestores da revista e editores de seção ficam isentos | **ligada** | Esses dois papéis gravam um autor e concluem a submissão com o iD ainda faltando. O cadastro público não entra: quem se cadastra ainda não tem papel na revista. Estar isento nunca torna um iD inválido aceitável — apenas dispensa de ter um. |
 
 O que também importa é a **guarda**: o plugin só age enquanto o ORCID OAuth estiver
 **desligado** no contexto — com o OAuth ligado essas opções não fazem nada e quem manda no
@@ -325,7 +331,7 @@ Desde a 1.1.2.0 o campo do cadastro e do perfil entra por um filtro de saída do
 substituir nenhum template do núcleo; a partir da 1.1.3.0 o filtro tem nome próprio, porque o Smarty
 chama todo filtro closure de "closure" e um apagava o de outro plugin (o campo do WhatsApp
 Contributor, por exemplo). Verificado no OJS 3.5.0.3 e no OMP 3.5.0.3 com o ORCID OAuth desligado:
-34 testes de unidade e 10 de navegador em cada.
+37 testes de unidade e 12 de navegador em cada.
 
 Os testes ficam no repositório e não fazem parte do pacote da release.
 

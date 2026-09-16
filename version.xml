@@ -11,7 +11,8 @@
   * is not configured: in the author/contributor form, on the public user
   * registration page and in the user profile. The journal chooses where the
   * field is offered and where the iD is required — registering, saving a
-  * contributor and completing a submission. Manual entry is a fallback;
+  * contributor and completing a submission — and whether whoever runs the
+  * journal is left out of it. Manual entry is a fallback;
   * authenticated ORCID (OAuth) remains the recommended approach.
   *
   * Plugin version information.
@@ -19,7 +20,7 @@
 <version>
 	<application>orcidManualEntry</application>
 	<type>plugins.generic</type>
-	<release>1.1.4.0</release>
+	<release>1.1.5.0</release>
 	<date>2026-09-16</date>
 	<lazy-load>1</lazy-load>
 	<class>OrcidManualEntryPlugin</class>

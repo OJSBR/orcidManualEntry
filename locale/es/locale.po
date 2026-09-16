@@ -52,3 +52,9 @@ msgstr "El iD ORCID es obligatorio para cada autor y coautor."
 
 msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
 msgstr "El envío no puede completarse mientras falte el iD ORCID de: {$names}."
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt"
+msgstr "Los gestores de la revista y los editores de sección quedan exentos"
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt.description"
+msgstr "Pueden guardar un autor y completar un envío con el iD todavía ausente. El registro público no entra: quien se registra aún no tiene un rol en la revista."

@@ -63,6 +63,7 @@ use PKP\linkAction\request\AjaxModal;
 use PKP\orcid\OrcidManager;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
+use PKP\security\Role;
 use PKP\template\PKPTemplateManager;
 use PKP\user\form\IdentityForm;
 use PKP\user\form\RegistrationForm;
@@ -87,7 +88,15 @@ class OrcidManualEntryPlugin extends GenericPlugin
         'requireOnRegistration' => false,
         'requireOnContributor' => false,
         'requireOnSubmit' => false,
+        'editorsExempt' => true,
     ];
+
+    /**
+     * Who is left out while `editorsExempt` is on: the roles that decide about
+     * the submission. An assistant follows the rule like everybody else. Public
+     * registration is not covered — whoever registers holds no role yet.
+     */
+    public const EXEMPT_ROLES = [Role::ROLE_ID_MANAGER, Role::ROLE_ID_SUB_EDITOR];
 
     /**
      * Templates that mount the ContributorsListPanel, where the field can be
@@ -206,6 +215,27 @@ class OrcidManualEntryPlugin extends GenericPlugin
     }
 
     /**
+     * Whether the person making the request is left out of what the journal
+     * requires. Being exempt never makes an invalid iD acceptable: it only
+     * lifts the requirement to have one.
+     */
+    public function isExempt(?int $contextId): bool
+    {
+        if ($contextId === null || !$this->getFlag($contextId, 'editorsExempt')) {
+            return false;
+        }
+        $user = Application::get()->getRequest()->getUser();
+
+        return $user && $user->hasRole(self::EXEMPT_ROLES, $contextId);
+    }
+
+    /** The same, for the journal of the request being answered. */
+    public function currentlyExempt(): bool
+    {
+        return $this->isExempt(Application::get()->getRequest()->getContext()?->getId());
+    }
+
+    /**
      * @copydoc Plugin::getActions()
      */
     public function getActions($request, $actionArgs)
@@ -272,7 +302,10 @@ class OrcidManualEntryPlugin extends GenericPlugin
         // which is what the rule has to be read from: a submission can also be
         // completed outside a request of its own journal.
         $context = $args[2] ?? Application::get()->getRequest()->getContext();
-        if (OrcidManager::isEnabled($context) || !$this->getFlag($context?->getId(), 'requireOnSubmit')) {
+        if (OrcidManager::isEnabled($context)
+            || !$this->getFlag($context?->getId(), 'requireOnSubmit')
+            || $this->isExempt($context?->getId())
+        ) {
             return Hook::CONTINUE;
         }
 
@@ -337,6 +370,10 @@ class OrcidManualEntryPlugin extends GenericPlugin
             'label' => __('user.orcid'),
             'description' => __('plugins.generic.orcidManualEntry.field.description'),
             'isMultilingual' => false,
+            // Where the journal requires it, the form marks it as it marks every
+            // other required field of the application, and whoever is exempt
+            // does not see a mark they are not held to.
+            'isRequired' => $this->currentFlag('requireOnContributor') && !$this->currentlyExempt(),
         ]), [FIELD_POSITION_AFTER, 'url']);
 
         return Hook::CONTINUE;
@@ -405,7 +442,8 @@ class OrcidManualEntryPlugin extends GenericPlugin
             return Hook::CONTINUE;
         }
 
-        $required = $this->currentFlag('requireOnContributor');
+        // Whoever runs the journal can be left out of the requirement.
+        $required = $this->currentFlag('requireOnContributor') && !$this->currentlyExempt();
         $props = $args[2] ?? [];
         if (!array_key_exists('orcid', $props)) {
             self::$hasPending = false;
@@ -538,8 +576,11 @@ class OrcidManualEntryPlugin extends GenericPlugin
         $templateMgr = PKPTemplateManager::getManager(Application::get()->getRequest());
         // Named: Smarty calls every closure filter "closure", so an unnamed one would replace, or be
         // replaced by, the output filter of another plugin in the same request.
-        $templateMgr->registerFilter('output', function (string $output) use ($form, $formKey): string {
-            return self::insertUserOrcidField($output, self::USER_FORM_IDS[$formKey], self::renderUserOrcidField($form, $formKey === 'registrationform'));
+        // Only the public registration page can require it: whoever edits their
+        // own profile is not the person a journal can hold to a rule here.
+        $required = $formKey === 'registrationform' && $this->currentFlag('requireOnRegistration');
+        $templateMgr->registerFilter('output', function (string $output) use ($form, $formKey, $required): string {
+            return self::insertUserOrcidField($output, self::USER_FORM_IDS[$formKey], self::renderUserOrcidField($form, $formKey === 'registrationform', $required));
         }, 'orcidManualEntryUserField');
 
         return Hook::CONTINUE;
@@ -549,7 +590,7 @@ class OrcidManualEntryPlugin extends GenericPlugin
      * The markup of the field, in the style of the page it goes into: the reader
      * pages for registration, the form builder style for the profile.
      */
-    public static function renderUserOrcidField(Form $form, bool $frontend): string
+    public static function renderUserOrcidField(Form $form, bool $frontend, bool $required = false): string
     {
         $value = htmlspecialchars((string) $form->getData('orcid'), ENT_QUOTES, 'UTF-8');
         $label = htmlspecialchars(__('user.orcid'), ENT_QUOTES, 'UTF-8');
@@ -557,17 +598,27 @@ class OrcidManualEntryPlugin extends GenericPlugin
         $errors = $form->getErrorsArray();
         $error = isset($errors['orcid']) ? '<span class="error">' . htmlspecialchars((string) $errors['orcid'], ENT_QUOTES, 'UTF-8') . '</span>' : '';
         $input = '<input type="text" name="orcid" id="orcidManualEntry" value="' . $value . '" maxlength="46" autocomplete="off"'
+            . ($required ? ' required aria-required="true"' : '')
             . ' placeholder="https://orcid.org/0000-0002-1825-0097" aria-describedby="orcidManualEntryDescription"';
 
         if ($frontend) {
+            // The mark the registration page puts on every field it requires.
+            $mark = $required
+                ? '<span class="required" aria-hidden="true">*</span><span class="pkp_screen_reader">'
+                    . htmlspecialchars(__('common.required'), ENT_QUOTES, 'UTF-8') . '</span>'
+                : '';
+
             return '<fieldset class="orcid orcidManualEntry"><legend>' . $label . '</legend><div class="fields"><div class="orcid"><label>'
-                . '<span class="label">' . $label . '</span>' . $input . '></label>'
+                . '<span class="label">' . $label . $mark . '</span>' . $input . '></label>'
                 . '<div class="description" id="orcidManualEntryDescription">' . $description . '</div>' . $error
                 . '</div></div></fieldset>';
         }
 
+        // The mark the forms of the administration put on a required field.
+        $mark = $required ? '<span class="req">*</span>' : '';
+
         return '<div class="section orcidManualEntry">' . $error . '<div>' . $input . ' class="field text">'
-            . '<label class="sub_label" for="orcidManualEntry">' . $label . '</label></div>'
+            . '<label class="sub_label" for="orcidManualEntry">' . $label . $mark . '</label></div>'
             . '<label class="description" id="orcidManualEntryDescription">' . $description . '</label></div>';
     }
 

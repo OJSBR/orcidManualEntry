@@ -71,7 +71,7 @@ class LocaleFilesTest extends PKPTestCase
     {
         $files = $this->files();
         $master = array_keys($files[self::MASTER]->entries);
-        $this->assertCount(15, $master);
+        $this->assertCount(17, $master);
 
         foreach ($files as $locale => $file) {
             $this->assertSame($master, array_keys($file->entries), "Keys of {$locale} differ from " . self::MASTER . '.');

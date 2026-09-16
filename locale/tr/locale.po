@@ -67,3 +67,11 @@ msgstr "The ORCID iD is required for every author and co-author."
 #, fuzzy
 msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
 msgstr "The submission cannot be completed while an ORCID iD is missing: {$names}."
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt"
+msgstr "Journal managers and section editors are exempt"
+
+#, fuzzy
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt.description"
+msgstr "They can save a contributor and complete a submission with the iD still missing. Public registration is not covered: whoever registers holds no role in the journal yet."

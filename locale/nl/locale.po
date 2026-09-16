@@ -52,3 +52,9 @@ msgstr "De ORCID iD is verplicht voor elke auteur en co-auteur."
 
 msgid "plugins.generic.orcidManualEntry.error.requiredOnSubmit"
 msgstr "De inzending kan niet worden afgerond zolang de ORCID iD ontbreekt van: {$names}."
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt"
+msgstr "Tijdschriftbeheerders en sectieredacteuren zijn vrijgesteld"
+
+msgid "plugins.generic.orcidManualEntry.settings.editorsExempt.description"
+msgstr "Zij kunnen een auteur opslaan en een inzending afronden terwijl de iD nog ontbreekt. De openbare registratie valt er niet onder: wie zich registreert heeft nog geen rol in het tijdschrift."

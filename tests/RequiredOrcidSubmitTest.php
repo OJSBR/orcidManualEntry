@@ -26,6 +26,7 @@ use APP\plugins\generic\orcidManualEntry\OrcidManualEntryPlugin;
 use APP\submission\Submission;
 use Illuminate\Support\Facades\DB;
 use PKP\core\PKPRequest;
+use PKP\core\Registry;
 use PKP\orcid\OrcidManager;
 use PKP\plugins\PluginRegistry;
 use PKP\security\Role;
@@ -43,6 +44,13 @@ class RequiredOrcidSubmitTest extends PKPTestCase
     /** The settings as they were before the test, to be put back. */
     private array $savedSettings = [];
     private ?OrcidManualEntryPlugin $plugin = null;
+
+    /**
+     * The plugin is registered once for the whole class: a hook added again in
+     * the same process would answer twice, and every message would be doubled.
+     */
+    private static ?OrcidManualEntryPlugin $registered = null;
+    private static bool $switchedOn = false;
 
     protected function setUp(): void
     {
@@ -62,6 +70,8 @@ class RequiredOrcidSubmitTest extends PKPTestCase
 
     protected function tearDown(): void
     {
+        $nobody = null;
+        Registry::set('user', $nobody);
         foreach ($this->savedSettings as $name => $value) {
             if ($value === null) {
                 $this->plugin?->updateSetting(self::CONTEXT_ID, $name, 0, 'bool');
@@ -103,7 +113,13 @@ class RequiredOrcidSubmitTest extends PKPTestCase
      */
     private function loadPlugin(): OrcidManualEntryPlugin
     {
-        PluginRegistry::loadCategory('generic', true, self::CONTEXT_ID);
+        if (self::$registered) {
+            return self::$registered;
+        }
+
+        // From disk, not from the database: a plugin that was never switched on
+        // is not in the enabled list, and this test switches it on itself.
+        PluginRegistry::loadCategory('generic', false, self::CONTEXT_ID);
         /** @var ?OrcidManualEntryPlugin $plugin */
         $plugin = PluginRegistry::getPlugin('generic', 'orcidmanualentryplugin');
         if (!$plugin) {
@@ -113,13 +129,25 @@ class RequiredOrcidSubmitTest extends PKPTestCase
             $this->markTestSkipped('ORCID OAuth is configured: the core owns the field and the plugin stays inert');
         }
         if (!$plugin->getEnabled(self::CONTEXT_ID)) {
-            $this->remember('enabled');
             $plugin->updateSetting(self::CONTEXT_ID, 'enabled', 1, 'bool');
+            self::$switchedOn = true;
             // Only now does register() attach the hooks.
             $plugin = new OrcidManualEntryPlugin();
             $plugin->register('generic', 'plugins/generic/orcidManualEntry', self::CONTEXT_ID);
         }
-        return $plugin;
+
+        return self::$registered = $plugin;
+    }
+
+    /** The journal is left switched off again if it was this test that switched it on. */
+    public static function tearDownAfterClass(): void
+    {
+        if (self::$switchedOn && self::$registered) {
+            self::$registered->updateSetting(self::CONTEXT_ID, 'enabled', 0, 'bool');
+        }
+        self::$registered = null;
+        self::$switchedOn = false;
+        parent::tearDownAfterClass();
     }
 
     /** Keeps a setting to put it back in tearDown(), then lets the test change it. */
@@ -133,8 +161,14 @@ class RequiredOrcidSubmitTest extends PKPTestCase
 
     private function requireOnSubmit(bool $required): void
     {
-        $this->remember('requireOnSubmit');
-        $this->plugin->updateSetting(self::CONTEXT_ID, 'requireOnSubmit', $required ? 1 : 0, 'bool');
+        $this->setFlag('requireOnSubmit', $required);
+    }
+
+    /** Changes a setting, keeping what it was to put it back in tearDown(). */
+    private function setFlag(string $name, bool $value): void
+    {
+        $this->remember($name);
+        $this->plugin->updateSetting(self::CONTEXT_ID, $name, $value ? 1 : 0, 'bool');
     }
 
     /** The first section of the context, or none where the application allows it. */
@@ -196,8 +230,27 @@ class RequiredOrcidSubmitTest extends PKPTestCase
         return Repo::submission()->get($submissionId);
     }
 
-    /** What the core answers the wizard, as one string. */
+    /**
+     * What this plugin holds against the contributors, as one string.
+     *
+     * Every plugin writes under the same key of the core, so what another one
+     * has to say about the same submission is left aside here — living beside
+     * it is the point, and there is a test of its own for that.
+     */
     private function contributorErrors(Submission $submission): string
+    {
+        $context = Application::getContextDAO()->getById(self::CONTEXT_ID);
+        $errors = Repo::submission()->validateSubmit($submission, $context);
+        $ours = array_filter(
+            (array) ($errors['contributors'] ?? []),
+            fn ($message) => str_contains(mb_strtoupper((string) $message), 'ORCID')
+        );
+
+        return implode(' | ', $ours);
+    }
+
+    /** Everything the core answers about the contributors, whoever wrote it. */
+    private function allContributorErrors(Submission $submission): string
     {
         $context = Application::getContextDAO()->getById(self::CONTEXT_ID);
         $errors = Repo::submission()->validateSubmit($submission, $context);
@@ -227,6 +280,70 @@ class RequiredOrcidSubmitTest extends PKPTestCase
             strtolower($this->contributorErrors($submission)),
             'nothing may be held against a submission whose contributors all have an iD'
         );
+    }
+
+    public function testTheEditorKeepsTheAutonomyToCompleteIt(): void
+    {
+        $this->requireOnSubmit(true);
+        $this->setFlag('editorsExempt', true);
+        $submission = $this->submissionWithContributors([['Dora', null]]);
+
+        $manager = Repo::user()->getCollector()->filterByContextIds([self::CONTEXT_ID])->filterByRoleIds([Role::ROLE_ID_MANAGER])->limit(1)->getMany()->first();
+        if (!$manager) {
+            $this->markTestSkipped('this context has no journal manager to act as');
+        }
+        // Somebody who writes submissions and does not run the journal: many
+        // accounts hold both roles, and those are exempt.
+        $author = Repo::user()->getCollector()->filterByContextIds([self::CONTEXT_ID])->filterByRoleIds([Role::ROLE_ID_AUTHOR])->getMany()
+            ->first(fn ($user) => !$user->hasRole(OrcidManualEntryPlugin::EXEMPT_ROLES, self::CONTEXT_ID));
+
+        if ($author) {
+            Registry::set('user', $author);
+            $this->assertStringContainsString('Dora', $this->contributorErrors($submission), 'an author is held to the rule');
+        }
+
+        Registry::set('user', $manager);
+        $this->assertStringNotContainsString(
+            'Dora',
+            $this->contributorErrors($submission),
+            'a journal manager completes the submission anyway'
+        );
+
+        // Unless the journal took that autonomy away.
+        $this->setFlag('editorsExempt', false);
+        $this->assertStringContainsString('Dora', $this->contributorErrors($submission));
+    }
+
+    public function testItLivesBesideWhatAnotherPluginHoldsAgainstTheSameSubmission(): void
+    {
+        $other = PluginRegistry::getPlugin('generic', 'requiredauthormetadataplugin');
+        if (!$other || !$other->getEnabled(self::CONTEXT_ID)) {
+            $this->markTestSkipped('the requiredAuthorMetadata plugin is not enabled here');
+        }
+        $wereRequired = [
+            'requireAffiliation' => $other->getSetting(self::CONTEXT_ID, 'requireAffiliation'),
+            'requireOnSubmit' => $other->getSetting(self::CONTEXT_ID, 'requireOnSubmit'),
+            'editorsExempt' => $other->getSetting(self::CONTEXT_ID, 'editorsExempt'),
+        ];
+        $other->updateSetting(self::CONTEXT_ID, 'requireAffiliation', 1, 'bool');
+        $other->updateSetting(self::CONTEXT_ID, 'requireOnSubmit', 1, 'bool');
+        $other->updateSetting(self::CONTEXT_ID, 'editorsExempt', 0, 'bool');
+
+        try {
+            $this->requireOnSubmit(true);
+            $this->setFlag('editorsExempt', false);
+            $submission = $this->submissionWithContributors([['Elena', null]]);
+
+            $everything = $this->allContributorErrors($submission);
+
+            // Both reasons reach the author, not whichever ran last.
+            $this->assertStringContainsString('ORCID', $everything, 'the iD is still asked for: ' . $everything);
+            $this->assertMatchesRegularExpression('/afilia|affilia/i', $everything, 'and so is the affiliation: ' . $everything);
+        } finally {
+            foreach ($wereRequired as $name => $value) {
+                $other->updateSetting(self::CONTEXT_ID, $name, $value === null ? 0 : $value, 'bool');
+            }
+        }
     }
 
     public function testNothingIsRequiredWhileTheSettingIsOff(): void
