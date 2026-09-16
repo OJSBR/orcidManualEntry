@@ -38,7 +38,11 @@ describe('ORCID Manual Entry plugin', function() {
 
 	// Same as PKP's cy.waitJQuery(), which the support files of OJS 3.3 test sites may lack.
 	// The Plugins tab can keep requests open for a while (the plugin gallery), hence the timeout.
-	const waitJQuery = () => cy.window().its('jQuery.active', {timeout: 60000}).should('eq', 0);
+	// jQuery may not be on the page yet when this runs, so the check retries on the window
+	// itself instead of on a property that would resolve as undefined.
+	const waitJQuery = () => cy.window({timeout: 60000}).should((win) => {
+		expect(win.jQuery && win.jQuery.active, 'pending jQuery requests').to.eq(0);
+	});
 
 	// Requests carry the browser's User-Agent: OJS 3.3 drops a session whose agent changes.
 	const request = (options) => cy.window({log: false}).then((win) => cy.request(Object.assign(

@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.2.1-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-1.1.3.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.2.1/orcidManualEntry-1.1.2.1.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.3.0/orcidManualEntry-1.1.3.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -24,11 +24,14 @@ the field: the **author/contributor form**, the **public user registration page*
 
 ## Compatibility & branches
 
-| OJS version | Branch | Plugin release |
+| Application | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x   | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.2.1 |
+| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.3.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
+
+> Since 1.1.3.0 the same package serves OJS and OMP. The former `orcidManualEntryOmp`
+> repository is archived; its releases stay available there.
 
 ## Why authenticated ORCID is recommended
 
@@ -191,9 +194,12 @@ do usuário**.
 
 ### Compatibilidade e branches
 
-| Versão do OJS | Branch | Release do plugin |
-|---------------|--------|-------------------|
-| OJS 3.5.x     | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.2.1 |
+| Aplicação | Branch | Release do plugin |
+|-----------|--------|-------------------|
+| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.3.0 |
+
+> A partir da 1.1.3.0 o mesmo pacote serve OJS e OMP. O antigo `orcidManualEntryOmp` está
+> arquivado; as releases dele continuam lá.
 
 Vale também para o OJS 3.4.x, onde a mesma restrição do núcleo foi introduzida.
 
@@ -262,7 +268,7 @@ formulário (iD gravado, o mesmo iD recusado para um segundo contribuidor mesmo 
 dígito errado recusado, iD removido), apagando os contribuidores que cria.
 
 Desde a 1.1.2.0 o campo do cadastro e do perfil entra por um filtro de saída do Smarty, sem
-substituir nenhum template do núcleo; a partir da 1.1.2.1 o filtro tem nome próprio, porque o Smarty
+substituir nenhum template do núcleo; a partir da 1.1.3.0 o filtro tem nome próprio, porque o Smarty
 chama todo filtro closure de "closure" e um apagava o de outro plugin (o campo do WhatsApp
 Contributor, por exemplo). Verificado no OJS 3.5.0.3 com o ORCID OAuth desligado.
 
