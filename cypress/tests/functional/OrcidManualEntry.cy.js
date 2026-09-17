@@ -305,6 +305,86 @@ describe('ORCID Manual Entry plugin', function() {
 		cy.get('form#register #connect-orcid-button').should('not.exist');
 	});
 
+	// A site with the Altcha captcha turned on for registration expects a solved
+	// proof of work along with the form. The PKP test data has it off, so this is
+	// a no-op there; solving it is what lets the very same spec run against a real
+	// installation, which is where the plugin has to work anyway.
+	const solveAltcha = (win) => {
+		const widget = win.document.querySelector('altcha-widget');
+		if (!widget) {
+			return;
+		}
+		const challenge = JSON.parse(widget.getAttribute('challengejson'));
+		const encoder = new win.TextEncoder();
+		const digest = async (number) => {
+			const buffer = await win.crypto.subtle.digest(challenge.algorithm, encoder.encode(challenge.salt + number));
+			return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+		};
+
+		return (async () => {
+			for (let number = 0; number <= (challenge.maxnumber || 100000); number++) {
+				if (await digest(number) === challenge.challenge) {
+					const input = win.document.createElement('input');
+					input.type = 'hidden';
+					input.name = 'altcha';
+					input.value = win.btoa(JSON.stringify({
+						algorithm: challenge.algorithm,
+						challenge: challenge.challenge,
+						number: number,
+						salt: challenge.salt,
+						signature: challenge.signature,
+						took: 1,
+					}));
+					win.document.querySelector('form[id=register]').appendChild(input);
+					// The floating widget hooks the submit event and would replace
+					// what was just put there.
+					widget.remove();
+
+					return;
+				}
+			}
+			throw new Error('the Altcha challenge could not be solved');
+		})();
+	};
+
+	// Offering the field is half the job: what is typed has to reach the account.
+	// The registration is done the way a person does it and the iD is then read
+	// back from the account, not from the page that was just sent.
+	it('Saves on the new account the iD typed on the registration page', function() {
+		const mark = 'orcidsaved' + Date.now().toString().slice(-8);
+
+		cy.clearCookies();
+		cy.visit(pageUrl('user/register') + '?reload=' + Date.now());
+		cy.get('form#register input[name="givenName"]').type('Orcid', {delay: 0});
+		cy.get('form#register input[name="familyName"]').type('Cypress', {delay: 0});
+		cy.get('form#register input[name="affiliation"]').type('OJSBR', {delay: 0});
+		cy.get('form#register select[name="country"]').select('BR');
+		cy.get('form#register input[name="email"]').type(mark + '@mailinator.com', {delay: 0});
+		cy.get('form#register input[name="username"]').type(mark, {delay: 0});
+		cy.get('form#register input[name="password"]').type('Ojsbr!Teste2026', {delay: 0, log: false});
+		cy.get('form#register input[name="password2"]').type('Ojsbr!Teste2026', {delay: 0, log: false});
+		cy.get('form#register input[name="orcid"]').clear().type(VALID, {delay: 0});
+		cy.get('body').then(($body) => {
+			if ($body.find('form#register input[name="privacyConsent"]').length) {
+				cy.get('form#register input[name="privacyConsent"]').check({force: true});
+			}
+			// Another plugin of the journal may ask for more on this page.
+			if ($body.find('form#register input[name="whatsapp"]').length) {
+				cy.get('form#register input[name="whatsapp"]').clear().type('+5511988887777', {delay: 0});
+			}
+		});
+		cy.window().then((win) => solveAltcha(win));
+		cy.get('form#register').submit();
+		cy.get('form#register', {timeout: 30000}).should('not.exist');
+
+		login(adminUser, adminPassword);
+		api(pageUrl('api/v1/users?searchPhrase=' + mark + '&count=10')).then((users) => {
+			const user = users.items.find((item) => item.userName === mark || item.username === mark);
+			expect(user, 'the account was created').to.exist;
+			expect(String(user.orcid), 'the iD typed reached the account').to.contain(VALID);
+		});
+	});
+
 	it('Saves a bare iD in the profile as its canonical URL', function() {
 		login(adminUser, adminPassword);
 		openIdentity();
