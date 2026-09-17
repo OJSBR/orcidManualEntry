@@ -634,14 +634,26 @@ class OrcidManualEntryPlugin extends GenericPlugin
      */
     public static function insertUserOrcidField(string $output, string $formId, string $field): string
     {
-        $formStart = strpos($output, 'id="' . $formId . '"');
-        if ($formStart === false || preg_match('/<input\b[^>]*\bname="orcid"/', $output)) {
+        if (preg_match('/<input\b[^>]*\bname="orcid"/', $output)) {
             return $output;
         }
 
         if ($formId === 'register') {
-            $tagEnd = strpos($output, '>', $formStart);
-            return $tagEnd === false ? $output : substr_replace($output, $field, $tagEnd + 1, 0);
+            // The registration page belongs to the theme, and a theme is free to
+            // write its own form: the id and the classes of the core may not be
+            // there at all. What no theme can change is where the form posts to,
+            // so that is what the field is anchored on.
+            if (!preg_match('~<form\b[^>]*\baction="[^"]*/user/register[^"]*"[^>]*>~i', $output, $match, PREG_OFFSET_CAPTURE)) {
+                return $output;
+            }
+
+            return substr_replace($output, $field, $match[0][1] + strlen($match[0][0]), 0);
+        }
+
+        // The profile is a page of the administration, which no theme rewrites.
+        $formStart = strpos($output, 'id="' . $formId . '"');
+        if ($formStart === false) {
+            return $output;
         }
 
         $required = strpos($output, 'class="formRequired"', $formStart);

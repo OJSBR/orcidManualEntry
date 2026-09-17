@@ -55,10 +55,10 @@ class OrcidManualEntryTest extends PKPTestCase
 
     public function testTheFieldGoesAtTheTopOfTheRegistrationForm(): void
     {
-        $page = '<div class="page"><form class="cmp_form register" id="register" method="post"><input type="hidden" name="csrfToken" value="x"></form></div>';
+        $page = '<div class="page"><form class="cmp_form register" id="register" method="post" action="https://x/index.php/j/user/register"><input type="hidden" name="csrfToken" value="x"></form></div>';
         $output = OrcidManualEntryPlugin::insertUserOrcidField($page, 'register', '<fieldset class="orcidManualEntry"></fieldset>');
 
-        $this->assertStringContainsString('id="register" method="post"><fieldset class="orcidManualEntry"></fieldset><input type="hidden" name="csrfToken"', $output);
+        $this->assertStringContainsString('/user/register"><fieldset class="orcidManualEntry"></fieldset><input type="hidden" name="csrfToken"', $output);
     }
 
     public function testTheFieldGoesAfterTheLastProfileFieldBeforeThePrivacyNote(): void
@@ -70,13 +70,31 @@ class OrcidManualEntryTest extends PKPTestCase
         $this->assertStringContainsString('<input id="preferredAvatarInitials-1"></div><div class="orcidManualEntry"></div><p>privacy</p>', $output);
     }
 
+    public function testTheFieldIsAddedToAFormWrittenByATheme(): void
+    {
+        // A theme may write its own registration form: no id of the core, no
+        // classes of the core. What it cannot change is where the form posts to.
+        $page = '<div class="page"><form class="form-register" method="post" action="https://x/index.php/j/pt_BR/user/register">'
+            . '<fieldset class="form-register"><div class="form-group"><input name="givenName"></div></fieldset>'
+            . '<button type="submit">Cadastrar</button></form></div>';
+
+        $output = OrcidManualEntryPlugin::insertUserOrcidField($page, 'register', '<fieldset class="orcidManualEntry">iD</fieldset>');
+
+        $this->assertStringContainsString('/user/register"><fieldset class="orcidManualEntry">iD</fieldset>', $output);
+        $this->assertSame(1, substr_count($output, 'orcidManualEntry'), 'the field goes in once');
+
+        // And a form that posts somewhere else is left alone.
+        $login = '<form class="form-login" method="post" action="https://x/index.php/j/pt_BR/login/signIn"></form>';
+        $this->assertSame($login, OrcidManualEntryPlugin::insertUserOrcidField($login, 'register', '<b>x</b>'));
+    }
+
     public function testOtherOutputAndAFormThatAlreadyHasTheFieldAreLeftAlone(): void
     {
         // The filter sees everything rendered after it is registered in the request.
         $block = '<div class="pkp_block">sidebar</div>';
         $this->assertSame($block, OrcidManualEntryPlugin::insertUserOrcidField($block, 'register', '<b>field</b>'));
 
-        $withField = '<form id="register"><input type="text" name="orcid"></form>';
+        $withField = '<form id="register" action="/index.php/j/user/register"><input type="text" name="orcid"></form>';
         $this->assertSame($withField, OrcidManualEntryPlugin::insertUserOrcidField($withField, 'register', '<b>field</b>'));
     }
 
