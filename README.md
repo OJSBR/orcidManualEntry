@@ -1,10 +1,10 @@
 # ORCID Manual Entry — OJS plugin
 
 [![OJS](https://img.shields.io/badge/OJS-3.5-brightgreen)](https://pkp.sfu.ca/ojs/)
-[![Version](https://img.shields.io/badge/version-1.1.6.0-blue)](version.xml)
+[![Version](https://img.shields.io/badge/version-5.0.0.0-blue)](version.xml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-lightgrey)](LICENSE)
 
-**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/1.1.6.0/orcidManualEntry-1.1.6.0.tar.gz) — or browse all [Releases](../../releases).
+**⬇️ Install package:** [OJS / OMP 3.5](https://github.com/OJSBR/orcidManualEntry/releases/download/5.0.0.0/orcidManualEntry-5.0.0.0.tar.gz) — or browse all [Releases](../../releases).
 
 A generic plugin for **Open Journal Systems (OJS)** that restores a **typeable (manual)
 ORCID field** — the behaviour from older OJS versions — for journals where **ORCID
@@ -26,7 +26,7 @@ the field: the **author/contributor form**, the **public user registration page*
 
 | Application | Branch | Plugin release |
 |-------------|--------|----------------|
-| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 1.1.6.0 |
+| OJS 3.5.x and OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(default)* | 5.0.0.0 |
 
 Also applies to OJS 3.4.x, where the same core restriction was introduced.
 
@@ -240,7 +240,7 @@ do usuário**.
 
 | Aplicação | Branch | Release do plugin |
 |-----------|--------|-------------------|
-| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 1.1.6.0 |
+| OJS 3.5.x e OMP 3.5.x | [`stable-3_5_0`](../../tree/stable-3_5_0) *(padrão)* | 5.0.0.0 |
 
 > A partir da 1.1.3.0 o mesmo pacote serve OJS e OMP. O antigo `orcidManualEntryOmp` está
 > arquivado; as releases dele continuam lá.
